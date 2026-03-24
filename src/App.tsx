@@ -130,6 +130,7 @@ export default function App() {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [darkMode, setDarkMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastSyncedContent = useRef<string | null>(null);
 
   useEffect(() => {
     if (darkMode) {
@@ -182,9 +183,17 @@ export default function App() {
     if (!activeFileId) return;
     const activeFile = nodes.find(n => n.id === activeFileId);
     if (activeFile && activeFile.content !== undefined) {
-      setMarkdown(activeFile.content);
+      // Only update local state if the server content is actually different from what we have
+      // AND it's different from the last thing we synced (to avoid echoes of our own saves)
+      if (activeFile.content !== markdown && activeFile.content !== lastSyncedContent.current) {
+        setMarkdown(activeFile.content);
+        lastSyncedContent.current = activeFile.content;
+      } else if (activeFile.content === markdown) {
+        // Keep track of the latest confirmed content from server
+        lastSyncedContent.current = activeFile.content;
+      }
     }
-  }, [activeFileId, nodes]);
+  }, [activeFileId, nodes, markdown]);
 
   // Auto-save
   useEffect(() => {
@@ -278,6 +287,18 @@ export default function App() {
     }
   };
 
+  const renameNode = async (id: string, newName: string) => {
+    try {
+      const nodeRef = doc(db, 'nodes', id);
+      await updateDoc(nodeRef, {
+        name: newName,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Failed to rename node:", error);
+    }
+  };
+
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => {
       const next = new Set(prev);
@@ -330,31 +351,31 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden font-sans transition-colors duration-200 bg-[#F5F5F4] dark:bg-[#1C1917] text-[#1C1917] dark:text-[#F5F5F4]">
+    <div className="flex h-screen overflow-hidden font-sans transition-colors duration-300 bg-claude-bg dark:bg-claude-dark-bg text-claude-text dark:text-claude-dark-text">
       {/* Sidebar */}
       <aside className={cn(
-        "flex flex-col border-r border-[#E7E5E4] dark:border-stone-800 bg-white dark:bg-stone-900 transition-all duration-300",
+        "flex flex-col border-r border-claude-border dark:border-claude-dark-border bg-claude-sidebar dark:bg-claude-dark-sidebar transition-all duration-300",
         isSidebarOpen ? "w-64" : "w-0 overflow-hidden"
       )}>
-        <div className="p-4 flex items-center justify-between border-b border-[#E7E5E4] dark:border-stone-800">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] dark:text-stone-500">Explorer</h2>
+        <div className="p-5 flex items-center justify-between border-b border-claude-border dark:border-claude-dark-border">
+          <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-claude-text/50 dark:text-claude-dark-text/40">Explorer</h2>
           <div className="flex items-center gap-1">
-            <button onClick={() => createNode('folder')} className="p-1.5 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md text-[#78716C] dark:text-stone-400" title="New Folder">
+            <button onClick={() => createNode('folder')} className="p-1.5 hover:bg-claude-bg dark:hover:bg-claude-dark-bg rounded-md text-claude-text/60 dark:text-claude-dark-text/60 transition-colors" title="New Folder">
               <FolderPlus className="w-4 h-4" />
             </button>
-            <button onClick={() => createNode('file')} className="p-1.5 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md text-[#78716C] dark:text-stone-400" title="New File">
+            <button onClick={() => createNode('file')} className="p-1.5 hover:bg-claude-bg dark:hover:bg-claude-dark-bg rounded-md text-claude-text/60 dark:text-claude-dark-text/60 transition-colors" title="New File">
               <Plus className="w-4 h-4" />
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 no-scrollbar">
           {user ? (
             nodes.length > 0 ? renderTree() : (
-              <div className="p-4 text-center">
-                <p className="text-[10px] text-[#A8A29E] uppercase tracking-wider mb-4">No files yet</p>
+              <div className="p-6 text-center">
+                <p className="text-[10px] text-claude-text/40 dark:text-claude-dark-text/40 uppercase tracking-widest mb-4">No files yet</p>
                 <button 
                   onClick={() => createNode('file')}
-                  className="w-full py-2 border border-dashed border-[#E7E5E4] rounded-lg text-[10px] font-bold uppercase tracking-widest text-[#78716C] hover:bg-[#F5F5F4] transition-colors"
+                  className="w-full py-2.5 border border-dashed border-claude-border dark:border-claude-dark-border rounded-xl text-[10px] font-bold uppercase tracking-widest text-claude-text/60 dark:text-claude-dark-text/60 hover:bg-claude-bg dark:hover:bg-claude-dark-bg transition-colors"
                 >
                   Create First File
                 </button>
@@ -362,18 +383,18 @@ export default function App() {
             )
           ) : (
             <div className="p-8 text-center">
-              <LogIn className="w-8 h-8 mx-auto mb-4 text-[#E7E5E4]" />
-              <p className="text-xs text-[#78716C] mb-4">Sign in to save your files</p>
-              <button onClick={handleLogin} className="w-full py-2 bg-[#1C1917] text-white rounded-lg text-[10px] font-bold uppercase tracking-widest">Sign In</button>
+              <LogIn className="w-8 h-8 mx-auto mb-4 text-claude-border dark:text-claude-dark-border" />
+              <p className="text-xs text-claude-text/60 dark:text-claude-dark-text/60 mb-5">Sign in to save your files</p>
+              <button onClick={handleLogin} className="w-full py-2.5 bg-claude-accent text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">Sign In</button>
             </div>
           )}
         </div>
-        <div className="p-4 border-t border-[#E7E5E4] dark:border-stone-800">
+        <div className="p-4 border-t border-claude-border dark:border-claude-dark-border">
           <div className="flex items-center justify-between">
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-lg text-[#78716C] dark:text-stone-400">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2.5 hover:bg-claude-bg dark:hover:bg-claude-dark-bg rounded-xl text-claude-text/60 dark:text-claude-dark-text/60 transition-colors">
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-lg text-[#78716C] dark:text-stone-400">
+            <button className="p-2.5 hover:bg-claude-bg dark:hover:bg-claude-dark-bg rounded-xl text-claude-text/60 dark:text-claude-dark-text/60 transition-colors">
               <Settings className="w-4 h-4" />
             </button>
           </div>
@@ -383,75 +404,75 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-stone-900 border-b border-[#E7E5E4] dark:border-stone-800 shadow-sm z-10">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-lg text-[#78716C] dark:text-stone-400">
-              <PanelLeft className="w-4 h-4" />
+        <header className="flex items-center justify-between px-8 py-4 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border z-10">
+          <div className="flex items-center gap-5">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl text-claude-text/60 dark:text-claude-dark-text/60 transition-colors">
+              <PanelLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#1C1917] dark:bg-stone-700 rounded-lg flex items-center justify-center">
+              <div className="w-9 h-9 bg-claude-accent rounded-xl flex items-center justify-center shadow-sm">
                 <Edit3 className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-sm font-bold tracking-tight hidden sm:block">Markdown Pro</h1>
+              <h1 className="text-base font-serif font-bold tracking-tight hidden sm:block">Markdown Pro</h1>
             </div>
             {activeFileId && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-[#F5F5F4] dark:bg-stone-800 rounded-full border border-[#E7E5E4] dark:border-stone-700">
-                <FileText className="w-3 h-3 text-[#78716C] dark:text-stone-400" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#44403C] dark:text-stone-300">
+              <div className="flex items-center gap-2 px-4 py-1.5 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border">
+                <FileText className="w-3.5 h-3.5 text-claude-accent" />
+                <span className="text-[11px] font-bold uppercase tracking-widest text-claude-text/80 dark:text-claude-dark-text/80">
                   {nodes.find(n => n.id === activeFileId)?.name}
                 </span>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-4">
-          <div className="flex bg-[#F5F5F4] dark:bg-stone-800 p-1 rounded-lg border border-[#E7E5E4] dark:border-stone-700">
-              <button onClick={() => setViewMode('editor')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'editor' ? "bg-white dark:bg-stone-900 shadow-sm text-[#1C1917] dark:text-white" : "text-[#78716C] dark:text-stone-400")}>Editor</button>
-              <button onClick={() => setViewMode('split')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all hidden md:block", viewMode === 'split' ? "bg-white dark:bg-stone-900 shadow-sm text-[#1C1917] dark:text-white" : "text-[#78716C] dark:text-stone-400")}>Split</button>
-              <button onClick={() => setViewMode('preview')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'preview' ? "bg-white dark:bg-stone-900 shadow-sm text-[#1C1917] dark:text-white" : "text-[#78716C] dark:text-stone-400")}>Preview</button>
+          <div className="flex items-center gap-5">
+            <div className="flex bg-claude-sidebar dark:bg-claude-dark-sidebar p-1 rounded-xl border border-claude-border dark:border-claude-dark-border">
+              <button onClick={() => setViewMode('editor')} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'editor' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Editor</button>
+              <button onClick={() => setViewMode('split')} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hidden md:block", viewMode === 'split' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Split</button>
+              <button onClick={() => setViewMode('preview')} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'preview' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Preview</button>
             </div>
 
             {user ? (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F5F5F4] dark:bg-stone-800 rounded-full border border-[#E7E5E4] dark:border-stone-700 hidden sm:flex">
-                  {user.photoURL ? <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" /> : <UserIcon className="w-4 h-4 text-[#78716C] dark:text-stone-400" />}
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#44403C] dark:text-stone-300 max-w-[80px] truncate">{user.displayName}</span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border hidden sm:flex">
+                  {user.photoURL ? <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" /> : <UserIcon className="w-4 h-4 text-claude-text/60" />}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-claude-text/80 dark:text-claude-dark-text/80 max-w-[90px] truncate">{user.displayName}</span>
                 </div>
-                <button onClick={handleLogout} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-[#78716C] dark:text-stone-400 hover:text-red-500 rounded-lg transition-colors"><LogOut className="w-4 h-4" /></button>
+                <button onClick={handleLogout} className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-claude-text/50 dark:text-claude-dark-text/50 hover:text-red-500 rounded-xl transition-colors"><LogOut className="w-4 h-4" /></button>
               </div>
             ) : (
-              <button onClick={handleLogin} className="flex items-center gap-2 px-4 py-2 bg-[#1C1917] dark:bg-stone-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"><LogIn className="w-4 h-4" /> Sign In</button>
+              <button onClick={handleLogin} className="flex items-center gap-2.5 px-5 py-2.5 bg-claude-text dark:bg-claude-dark-text text-white dark:text-claude-dark-bg rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-sm"><LogIn className="w-4 h-4" /> Sign In</button>
             )}
           </div>
         </header>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-2 bg-white dark:bg-stone-900 border-b border-[#E7E5E4] dark:border-stone-800 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-8 py-2.5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5">
             <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" />
             <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" />
-            <div className="w-px h-4 bg-[#E7E5E4] dark:bg-stone-700 mx-1" />
+            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
             <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => insertText('\n- ')} title="Unordered List" />
             <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => insertText('\n1. ')} title="Ordered List" />
-            <div className="w-px h-4 bg-[#E7E5E4] dark:bg-stone-700 mx-1" />
+            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
             <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} onClick={() => insertText('[', '](url)')} title="Link" />
             <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" />
             
             <div className="relative">
-              <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-1 p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md transition-colors text-[#78716C] dark:text-stone-400 hover:text-[#1C1917] dark:hover:text-white">
+              <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-1.5 p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white">
                 <Code className="w-4 h-4" />
-                <ChevronDown className="w-3 h-3" />
+                <ChevronDown className="w-3.5 h-3.5" />
               </button>
               {showLangMenu && (
-                <div className="absolute top-full left-0 mt-1 w-32 bg-white dark:bg-stone-800 border border-[#E7E5E4] dark:border-stone-700 rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute top-full left-0 mt-2 w-40 bg-white dark:bg-claude-dark-sidebar border border-claude-border dark:border-claude-dark-border rounded-2xl shadow-xl z-50 py-2 overflow-hidden">
                   {LANGUAGES.map(lang => (
-                    <button key={lang.value} onClick={() => insertCodeBlock(lang.value)} className="w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#F5F5F4] dark:hover:bg-stone-700 text-[#44403C] dark:text-stone-300">{lang.label}</button>
+                    <button key={lang.value} onClick={() => insertCodeBlock(lang.value)} className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-claude-bg dark:hover:bg-claude-dark-bg text-claude-text/80 dark:text-claude-dark-text/80 transition-colors">{lang.label}</button>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="w-px h-4 bg-[#E7E5E4] dark:bg-stone-700 mx-1" />
+            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
             <ToolbarButton icon={<Copy className="w-4 h-4" />} onClick={() => { navigator.clipboard.writeText(markdown); setCopied(true); setTimeout(() => setCopied(false), 2000); }} title="Copy" />
             <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download" />
           </div>
@@ -461,14 +482,14 @@ export default function App() {
         <main className="flex-1 flex overflow-hidden">
           {(viewMode === 'split' || viewMode === 'editor') && (
             <div className={cn(
-              "flex-1 flex flex-col bg-white dark:bg-[#1C1917]",
-              viewMode === 'split' ? "border-r border-[#E7E5E4] dark:border-stone-800" : ""
+              "flex-1 flex flex-col bg-white dark:bg-claude-dark-bg",
+              viewMode === 'split' ? "border-r border-claude-border dark:border-claude-dark-border" : ""
             )}>
               <textarea
                 ref={textareaRef}
                 value={markdown}
                 onChange={(e) => setMarkdown(e.target.value)}
-                className="flex-1 p-8 resize-none focus:outline-none font-mono text-sm leading-relaxed text-[#44403C] dark:text-stone-300 bg-transparent"
+                className="flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent"
                 placeholder="Start writing markdown..."
                 spellCheck={false}
               />
@@ -476,8 +497,8 @@ export default function App() {
           )}
 
           {(viewMode === 'split' || viewMode === 'preview') && (
-            <div className="flex-1 overflow-y-auto bg-[#FAFAF9] dark:bg-[#262626] p-8">
-              <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-6 [&_h1]:text-[#1C1917] dark:[&_h1]:text-white [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-[#1C1917] dark:[&_h2]:text-white [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-[#1C1917] dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-4 [&_p]:text-[#44403C] dark:[&_p]:text-stone-300 [&_a]:text-blue-500 [&_img]:rounded-2xl [&_img]:my-6 [&_blockquote]:border-l-4 [&_blockquote]:border-stone-300 dark:[&_blockquote]:border-stone-700 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-stone-600 dark:[&_blockquote]:text-stone-400 [&_blockquote]:my-4 [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_th]:border [&_th]:border-stone-300 dark:[&_th]:border-stone-700 [&_th]:p-2 [&_th]:bg-stone-100 dark:[&_th]:bg-stone-800 [&_td]:border [&_td]:border-stone-300 dark:[&_td]:border-stone-700 [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-stone-100 dark:[&_code]:bg-stone-800 [&_code]:px-1 [&_code]:rounded">
+            <div className="flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10">
+              <div className="max-w-3xl mx-auto [&_h1]:text-5xl [&_h1]:font-serif [&_h1]:font-bold [&_h1]:mb-8 [&_h1]:text-claude-text dark:[&_h1]:text-white [&_h2]:text-3xl [&_h2]:font-serif [&_h2]:font-bold [&_h2]:mt-12 [&_h2]:mb-6 [&_h2]:text-claude-text dark:[&_h2]:text-white [&_h3]:text-2xl [&_h3]:font-serif [&_h3]:font-bold [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:text-claude-text dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-5 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-3xl [&_img]:my-8 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-6 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:my-8 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-3 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-3 [&_ul]:list-disc [&_ul]:pl-8 [&_ul]:my-5 [&_ol]:list-decimal [&_ol]:pl-8 [&_ol]:my-5 [&_li]:my-2 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-2 [&_code]:py-0.5 [&_code]:rounded-lg">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -488,14 +509,15 @@ export default function App() {
                           style={darkMode ? vscDarkPlus : vs}
                           language={match[1]}
                           PreTag="pre"
-                          customStyle={{ border: 'none', margin: 0, background: 'transparent' }}
-                          className={cn("rounded-xl !p-4", darkMode ? "!bg-[#0A0A0A]" : "!bg-[#F5F5F4]")}
+                          customStyle={{ border: 'none', margin: 0, background: 'transparent', fontFamily: 'inherit' }}
+                          codeTagProps={{ style: { fontFamily: 'inherit' } }}
+                          className={cn("rounded-2xl !p-6 shadow-sm", darkMode ? "!bg-[#0D0D0D]" : "!bg-claude-sidebar")}
                           {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       ) : (
-                        <code className={cn("bg-[#F5F5F4] dark:bg-stone-700 px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
+                        <code className={cn("bg-claude-sidebar dark:bg-claude-dark-sidebar px-2 py-0.5 rounded-lg text-sm font-mono", className)} {...props}>
                           {children}
                         </code>
                       );
@@ -510,11 +532,11 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="px-6 py-2 bg-white dark:bg-stone-900 border-t border-[#E7E5E4] dark:border-stone-800 flex items-center justify-between text-[10px] font-bold text-[#A8A29E] dark:text-stone-500 uppercase tracking-widest">
-          <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1.5"><Search className="w-3 h-3" /> {markdown.length} Characters</span>
+        <footer className="px-8 py-3 bg-claude-bg dark:bg-claude-dark-bg border-t border-claude-border dark:border-claude-dark-border flex items-center justify-between text-[11px] font-bold text-claude-text/40 dark:text-claude-dark-text/40 uppercase tracking-[0.2em]">
+          <div className="flex items-center gap-8">
+            <span className="flex items-center gap-2"><Search className="w-3.5 h-3.5" /> {markdown.length} Characters</span>
             <span>{markdown.split(/\s+/).filter(Boolean).length} Words</span>
-            {user && activeFileId && <span className="text-green-600 flex items-center gap-1.5"><Check className="w-3 h-3" /> Saved to Cloud</span>}
+            {user && activeFileId && <span className="text-claude-accent flex items-center gap-2"><Check className="w-3.5 h-3.5" /> Saved to Cloud</span>}
           </div>
         </footer>
       </div>
@@ -525,7 +547,7 @@ export default function App() {
 
 function ToolbarButton({ icon, onClick, title }: { icon: React.ReactNode, onClick: () => void, title: string }) {
   return (
-    <button onClick={onClick} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md transition-colors text-[#78716C] dark:text-stone-400 hover:text-[#1C1917] dark:hover:text-white" title={title}>
+    <button onClick={onClick} className="p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white" title={title}>
       {icon}
     </button>
   );

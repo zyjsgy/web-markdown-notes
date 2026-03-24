@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -6,10 +6,29 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace, var(--font-sans);
+  --font-serif: "Source Serif 4", serif;
+  
+  --color-claude-bg: #F9F8F6;
+  --color-claude-sidebar: #F0EEE9;
+  --color-claude-text: #1D1C1A;
+  --color-claude-accent: #D97757;
+  --color-claude-border: #E5E2DA;
+  
+  --color-claude-dark-bg: #1A1917;
+  --color-claude-dark-sidebar: #242321;
+  --color-claude-dark-text: #E6E1DB;
+  --color-claude-dark-border: #33312E;
 }
 
 @layer base {
+  body {
+    @apply bg-claude-bg text-claude-text transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-claude-dark-bg text-claude-dark-text;
+  }
   /* Custom scrollbar for better look */
   ::-webkit-scrollbar {
     width: 8px;
@@ -44,5 +63,6 @@
     outline: none !important;
     background: #F5F5F4 !important;
     color: #1C1917 !important;
+    font-family: var(--font-mono), var(--font-sans) !important;
   }
 }
