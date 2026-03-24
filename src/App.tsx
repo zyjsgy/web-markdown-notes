@@ -128,6 +128,8 @@ export default function App() {
   const [nodes, setNodes] = useState<FileNode[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSyncedContent = useRef<string | null>(null);
@@ -308,46 +310,113 @@ export default function App() {
     });
   };
 
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedNodeId(id);
+    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, node: FileNode) => {
+    e.preventDefault();
+    if (node.type === 'folder' && node.id !== draggedNodeId) {
+      setDropTargetId(node.id);
+      e.dataTransfer.dropEffect = 'move';
+    } else {
+      setDropTargetId(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetParentId: string | null) => {
+    e.preventDefault();
+    const nodeId = e.dataTransfer.getData('text/plain');
+    setDraggedNodeId(null);
+    setDropTargetId(null);
+
+    if (!nodeId || nodeId === targetParentId) return;
+
+    // Prevent dropping a folder into itself or its children
+    const isDescendant = (parent: string, child: string): boolean => {
+      const childNode = nodes.find(n => n.id === child);
+      if (!childNode || !childNode.parentId) return false;
+      if (childNode.parentId === parent) return true;
+      return isDescendant(parent, childNode.parentId);
+    };
+
+    if (targetParentId && isDescendant(nodeId, targetParentId)) return;
+
+    try {
+      const nodeRef = doc(db, 'nodes', nodeId);
+      await updateDoc(nodeRef, {
+        parentId: targetParentId,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Failed to move node:", error);
+    }
+  };
+
   const renderTree = (parentId: string | null = null, depth = 0) => {
     const children = nodes.filter(n => n.parentId === parentId);
-    return children.map(node => (
-      <div key={node.id}>
-        <div 
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-[#E7E5E4] dark:hover:bg-[#292524] transition-colors rounded-md group",
-            activeFileId === node.id ? "bg-[#E7E5E4] dark:bg-[#292524] text-[#1C1917] dark:text-white" : "text-[#57534E] dark:text-[#A8A29E]"
-          )}
-          style={{ paddingLeft: `${depth * 12 + 12}px` }}
-          onClick={() => {
-            if (node.type === 'folder') toggleFolder(node.id);
-            else setActiveFileId(node.id);
-          }}
-        >
-          {node.type === 'folder' ? (
-            expandedFolders.has(node.id) ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />
-          ) : (
-            <FileText className="w-3.5 h-3.5" />
-          )}
-          {node.type === 'folder' && <Folder className="w-3.5 h-3.5 text-blue-500" />}
-          <span className="text-xs font-medium truncate flex-1">{node.name}</span>
-          
-          <div className="hidden group-hover:flex items-center gap-1">
-            {node.type === 'folder' && (
-              <button onClick={(e) => { e.stopPropagation(); createNode('file', node.id); }} className="p-1 hover:bg-[#D6D3D1] dark:hover:bg-[#44403C] rounded">
-                <FilePlus className="w-3 h-3" />
-              </button>
-            )}
-            <button onClick={(e) => { e.stopPropagation(); const newName = prompt('Rename to:', node.name); if (newName) renameNode(node.id, newName); }} className="p-1 hover:bg-[#D6D3D1] dark:hover:bg-[#44403C] rounded">
-              <Edit2 className="w-3 h-3" />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded">
-              <Trash2 className="w-3 h-3" />
-            </button>
+    return (
+      <div 
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (parentId === null) e.dataTransfer.dropEffect = 'move';
+        }}
+        onDrop={(e) => parentId === null && handleDrop(e, null)}
+        className={cn(parentId === null && "min-h-[20px]")}
+      >
+        {children.map(node => (
+          <div key={node.id}>
+            <div 
+              draggable
+              onDragStart={(e) => handleDragStart(e, node.id)}
+              onDragOver={(e) => handleDragOver(e, node)}
+              onDragLeave={() => setDropTargetId(null)}
+              onDrop={(e) => {
+                e.stopPropagation();
+                if (node.type === 'folder') handleDrop(e, node.id);
+                else handleDrop(e, node.parentId);
+              }}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-claude-bg dark:hover:bg-claude-dark-bg transition-all rounded-xl group relative",
+                activeFileId === node.id ? "bg-claude-bg dark:bg-claude-dark-bg text-claude-accent" : "text-claude-text/70 dark:text-claude-dark-text/70",
+                dropTargetId === node.id && "bg-claude-accent/10 ring-2 ring-claude-accent ring-inset",
+                draggedNodeId === node.id && "opacity-40"
+              )}
+              style={{ paddingLeft: `${depth * 12 + 12}px` }}
+              onClick={() => {
+                if (node.type === 'folder') toggleFolder(node.id);
+                else setActiveFileId(node.id);
+              }}
+            >
+              {node.type === 'folder' ? (
+                expandedFolders.has(node.id) ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />
+              ) : (
+                <FileText className="w-3.5 h-3.5" />
+              )}
+              {node.type === 'folder' && <Folder className="w-3.5 h-3.5 text-blue-500/70" />}
+              <span className="text-xs font-medium truncate flex-1">{node.name}</span>
+              
+              <div className="hidden group-hover:flex items-center gap-1">
+                {node.type === 'folder' && (
+                  <button onClick={(e) => { e.stopPropagation(); createNode('file', node.id); }} className="p-1 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-lg transition-colors">
+                    <FilePlus className="w-3 h-3" />
+                  </button>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); const newName = prompt('Rename to:', node.name); if (newName) renameNode(node.id, newName); }} className="p-1 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-lg transition-colors">
+                  <Edit2 className="w-3 h-3" />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-lg transition-colors">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            {node.type === 'folder' && expandedFolders.has(node.id) && renderTree(node.id, depth + 1)}
           </div>
-        </div>
-        {node.type === 'folder' && expandedFolders.has(node.id) && renderTree(node.id, depth + 1)}
+        ))}
       </div>
-    ));
+    );
   };
 
   return (
@@ -434,9 +503,12 @@ export default function App() {
 
             {user ? (
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border hidden sm:flex">
-                  {user.photoURL ? <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" /> : <UserIcon className="w-4 h-4 text-claude-text/60" />}
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-claude-text/80 dark:text-claude-dark-text/80 max-w-[90px] truncate">{user.displayName}</span>
+                <div className="flex items-center justify-center w-9 h-9 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border overflow-hidden">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt={user.displayName || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <UserIcon className="w-5 h-5 text-claude-text/60" />
+                  )}
                 </div>
                 <button onClick={handleLogout} className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-claude-text/50 dark:text-claude-dark-text/50 hover:text-red-500 rounded-xl transition-colors"><LogOut className="w-4 h-4" /></button>
               </div>
