@@ -28,6 +28,7 @@ import {
   User as UserIcon,
   ChevronDown,
   ChevronRight,
+  Edit2,
   Folder,
   FileText,
   Plus,
@@ -315,6 +316,9 @@ export default function App() {
                 <FilePlus className="w-3 h-3" />
               </button>
             )}
+            <button onClick={(e) => { e.stopPropagation(); const newName = prompt('Rename to:', node.name); if (newName) renameNode(node.id, newName); }} className="p-1 hover:bg-[#D6D3D1] dark:hover:bg-[#44403C] rounded">
+              <Edit2 className="w-3 h-3" />
+            </button>
             <button onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 rounded">
               <Trash2 className="w-3 h-3" />
             </button>
@@ -401,22 +405,22 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="flex bg-[#F5F5F4] p-1 rounded-lg border border-[#E7E5E4]">
-              <button onClick={() => setViewMode('editor')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'editor' ? "bg-white shadow-sm text-[#1C1917]" : "text-[#78716C]")}>Editor</button>
-              <button onClick={() => setViewMode('split')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all hidden md:block", viewMode === 'split' ? "bg-white shadow-sm text-[#1C1917]" : "text-[#78716C]")}>Split</button>
-              <button onClick={() => setViewMode('preview')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'preview' ? "bg-white shadow-sm text-[#1C1917]" : "text-[#78716C]")}>Preview</button>
+          <div className="flex bg-[#F5F5F4] dark:bg-stone-800 p-1 rounded-lg border border-[#E7E5E4] dark:border-stone-700">
+              <button onClick={() => setViewMode('editor')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'editor' ? "bg-white dark:bg-stone-900 shadow-sm text-[#1C1917] dark:text-white" : "text-[#78716C] dark:text-stone-400")}>Editor</button>
+              <button onClick={() => setViewMode('split')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all hidden md:block", viewMode === 'split' ? "bg-white dark:bg-stone-900 shadow-sm text-[#1C1917] dark:text-white" : "text-[#78716C] dark:text-stone-400")}>Split</button>
+              <button onClick={() => setViewMode('preview')} className={cn("px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'preview' ? "bg-white dark:bg-stone-900 shadow-sm text-[#1C1917] dark:text-white" : "text-[#78716C] dark:text-stone-400")}>Preview</button>
             </div>
 
             {user ? (
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F5F5F4] rounded-full border border-[#E7E5E4] hidden sm:flex">
-                  {user.photoURL ? <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" /> : <UserIcon className="w-4 h-4 text-[#78716C]" />}
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#44403C] max-w-[80px] truncate">{user.displayName}</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#F5F5F4] dark:bg-stone-800 rounded-full border border-[#E7E5E4] dark:border-stone-700 hidden sm:flex">
+                  {user.photoURL ? <img src={user.photoURL} alt="" className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" /> : <UserIcon className="w-4 h-4 text-[#78716C] dark:text-stone-400" />}
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#44403C] dark:text-stone-300 max-w-[80px] truncate">{user.displayName}</span>
                 </div>
-                <button onClick={handleLogout} className="p-2 hover:bg-red-50 text-[#78716C] hover:text-red-500 rounded-lg transition-colors"><LogOut className="w-4 h-4" /></button>
+                <button onClick={handleLogout} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-[#78716C] dark:text-stone-400 hover:text-red-500 rounded-lg transition-colors"><LogOut className="w-4 h-4" /></button>
               </div>
             ) : (
-              <button onClick={handleLogin} className="flex items-center gap-2 px-4 py-2 bg-[#1C1917] text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"><LogIn className="w-4 h-4" /> Sign In</button>
+              <button onClick={handleLogin} className="flex items-center gap-2 px-4 py-2 bg-[#1C1917] dark:bg-stone-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"><LogIn className="w-4 h-4" /> Sign In</button>
             )}
           </div>
         </header>
@@ -472,7 +476,7 @@ export default function App() {
           )}
 
           {(viewMode === 'split' || viewMode === 'preview') && (
-            <div className="flex-1 overflow-y-auto bg-[#FAFAF9] dark:bg-[#1C1917] p-8">
+            <div className="flex-1 overflow-y-auto bg-[#FAFAF9] dark:bg-[#262626] p-8">
               <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-6 [&_h1]:text-[#1C1917] dark:[&_h1]:text-white [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-[#1C1917] dark:[&_h2]:text-white [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-[#1C1917] dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-4 [&_p]:text-[#44403C] dark:[&_p]:text-stone-300 [&_a]:text-blue-500 [&_img]:rounded-2xl [&_img]:my-6 [&_blockquote]:border-l-4 [&_blockquote]:border-stone-300 dark:[&_blockquote]:border-stone-700 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-stone-600 dark:[&_blockquote]:text-stone-400 [&_blockquote]:my-4 [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_th]:border [&_th]:border-stone-300 dark:[&_th]:border-stone-700 [&_th]:p-2 [&_th]:bg-stone-100 dark:[&_th]:bg-stone-800 [&_td]:border [&_td]:border-stone-300 dark:[&_td]:border-stone-700 [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-stone-100 dark:[&_code]:bg-stone-800 [&_code]:px-1 [&_code]:rounded">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
@@ -485,13 +489,13 @@ export default function App() {
                           language={match[1]}
                           PreTag="pre"
                           customStyle={{ border: 'none', margin: 0, background: 'transparent' }}
-                          className={cn("rounded-xl !p-4", darkMode ? "!bg-stone-950" : "!bg-[#F5F5F4]")}
+                          className={cn("rounded-xl !p-4", darkMode ? "!bg-[#0A0A0A]" : "!bg-[#F5F5F4]")}
                           {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       ) : (
-                        <code className={cn("bg-[#F5F5F4] dark:bg-stone-800 px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
+                        <code className={cn("bg-[#F5F5F4] dark:bg-stone-700 px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
                           {children}
                         </code>
                       );
