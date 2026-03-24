@@ -70,9 +70,9 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 
-const INITIAL_MARKDOWN = `# Welcome to Markdown Pro
+const INITIAL_MARKDOWN = `# Welcome to Markdown Cloud
 
-Markdown Pro is a professional-grade editor with real-time preview and AI-powered writing assistance.
+Markdown Cloud is a professional-grade editor with real-time preview and AI-powered writing assistance.
 
 ## Key Features
 - **Real-time Preview**: See your changes as you type.
@@ -505,51 +505,51 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center justify-between px-8 py-4 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border z-10">
-          <div className="flex items-center gap-5">
+        <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border z-10">
+          <div className="flex items-center gap-3 sm:gap-6">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl text-claude-text/60 dark:text-claude-dark-text/60 transition-colors">
-              <PanelLeft className="w-5 h-5" />
+              <PanelLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-claude-accent rounded-xl flex items-center justify-center shadow-sm">
-                <Edit3 className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3 sm:gap-4 group cursor-default">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-claude-accent rounded-2xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
+                <Edit3 className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
-              <h1 className="text-base font-serif font-bold tracking-tight hidden sm:block">Markdown Pro</h1>
+              <h1 className="text-lg sm:text-2xl font-serif font-black tracking-tight text-claude-text dark:text-white">Markdown <span className="text-claude-accent">Cloud</span></h1>
             </div>
             {activeFileId && (
-              <div className="flex items-center gap-2 px-4 py-1.5 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border">
+              <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border shadow-sm">
                 {activeFileId === 'welcome' ? (
-                  <Sparkles className="w-3.5 h-3.5 text-claude-accent" />
+                  <Sparkles className="w-4 h-4 text-claude-accent" />
                 ) : (
-                  <FileText className="w-3.5 h-3.5 text-claude-accent" />
+                  <FileText className="w-4 h-4 text-claude-accent" />
                 )}
-                <span className="text-[11px] font-bold uppercase tracking-widest text-claude-text/80 dark:text-claude-dark-text/80">
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-claude-text/80 dark:text-claude-dark-text/80">
                   {activeFileId === 'welcome' ? 'Welcome Guide' : nodes.find(n => n.id === activeFileId)?.name}
                 </span>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-5">
-            <div className="flex bg-claude-sidebar dark:bg-claude-dark-sidebar p-1 rounded-xl border border-claude-border dark:border-claude-dark-border">
-              <button onClick={() => setViewMode('editor')} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'editor' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Editor</button>
-              <button onClick={() => setViewMode('split')} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all hidden md:block", viewMode === 'split' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Split</button>
-              <button onClick={() => setViewMode('preview')} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all", viewMode === 'preview' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Preview</button>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="flex bg-claude-sidebar dark:bg-claude-dark-sidebar p-1 rounded-xl border border-claude-border dark:border-claude-dark-border shadow-sm">
+              <button onClick={() => setViewMode('editor')} className={cn("px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-[9px] sm:text-[11px] font-bold uppercase tracking-widest transition-all", viewMode === 'editor' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Editor</button>
+              <button onClick={() => setViewMode('split')} className={cn("px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-[9px] sm:text-[11px] font-bold uppercase tracking-widest transition-all hidden md:block", viewMode === 'split' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Split</button>
+              <button onClick={() => setViewMode('preview')} className={cn("px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-[9px] sm:text-[11px] font-bold uppercase tracking-widest transition-all", viewMode === 'preview' ? "bg-white dark:bg-claude-dark-bg shadow-sm text-claude-text dark:text-white" : "text-claude-text/50 dark:text-claude-dark-text/50")}>Preview</button>
             </div>
 
             {user ? (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center w-9 h-9 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border overflow-hidden">
+              <div className="flex items-center gap-3 sm:gap-5">
+                <div className="flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border overflow-hidden shadow-sm">
                   {user.photoURL ? (
                     <img src={user.photoURL} alt={user.displayName || ""} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <UserIcon className="w-5 h-5 text-claude-text/60" />
+                    <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-claude-text/60" />
                   )}
                 </div>
-                <button onClick={handleLogout} className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-claude-text/50 dark:text-claude-dark-text/50 hover:text-red-500 rounded-xl transition-colors"><LogOut className="w-4 h-4" /></button>
+                <button onClick={handleLogout} className="p-2 sm:p-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-claude-text/50 dark:text-claude-dark-text/50 hover:text-red-500 rounded-xl transition-colors"><LogOut className="w-4 h-4 sm:w-5 sm:h-5" /></button>
               </div>
             ) : (
-              <button onClick={handleLogin} className="flex items-center gap-2.5 px-5 py-2.5 bg-claude-text dark:bg-claude-dark-text text-white dark:text-claude-dark-bg rounded-xl text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-sm"><LogIn className="w-4 h-4" /> Sign In</button>
+              <button onClick={handleLogin} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 bg-claude-text dark:bg-claude-dark-text text-white dark:text-claude-dark-bg rounded-xl text-[9px] sm:text-[11px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-md"><LogIn className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Sign In</span></button>
             )}
           </div>
         </header>
