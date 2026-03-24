@@ -461,7 +461,7 @@ export default function App() {
 
           {(viewMode === 'split' || viewMode === 'preview') && (
             <div className="flex-1 overflow-y-auto bg-[#FAFAF9] p-8">
-              <div className="max-w-3xl mx-auto prose prose-stone prose-sm sm:prose-base lg:prose-lg prose-headings:font-bold prose-a:text-blue-500 prose-img:rounded-2xl">
+              <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-bold [&_p]:leading-relaxed [&_a]:text-blue-500 [&_img]:rounded-2xl">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
