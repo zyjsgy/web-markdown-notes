@@ -514,7 +514,7 @@ export default function App() {
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-claude-accent rounded-2xl flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
                 <Edit3 className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
-              <h1 className="text-lg sm:text-2xl font-serif font-black tracking-tight text-claude-text dark:text-white">Markdown <span className="text-claude-accent">Cloud</span></h1>
+              <h1 className="text-lg sm:text-2xl font-serif font-black tracking-tight text-claude-text dark:text-white">Markdown Cloud</h1>
             </div>
             {activeFileId && (
               <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border shadow-sm">
