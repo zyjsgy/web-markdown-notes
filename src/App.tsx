@@ -537,13 +537,13 @@ export default function App() {
                           style={theme === 'dark' ? vscDarkPlus : vs}
                           language={match[1]}
                           PreTag="div"
-                          className="rounded-xl !bg-[#F5F5F4] dark:!bg-[#1C1917] !p-4 border border-[#E7E5E4] dark:border-[#292524]"
+                          className="rounded-xl !bg-[#F5F5F4] dark:!bg-black !p-4 border border-[#E7E5E4] dark:border-[#292524]"
                           {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       ) : (
-                        <code className={cn("bg-[#F5F5F4] dark:bg-[#1C1917] px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
+                        <code className={cn("bg-[#F5F5F4] dark:bg-black px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
                           {children}
                         </code>
                       );
