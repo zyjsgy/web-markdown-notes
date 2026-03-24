@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isValidNode(data) {
+      return data.keys().hasAll(['name', 'type', 'uid', 'updatedAt', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 255 &&
+             data.type in ['file', 'folder'] &&
+             data.uid == request.auth.uid &&
+             data.updatedAt is timestamp &&
+             data.createdAt is timestamp &&
+             (!('content' in data) || data.content is string) &&
+             (!('parentId' in data) || data.parentId == null || data.parentId is string);
+    }
+
+    match /nodes/{nodeId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && isValidNode(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isValidNode(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+  }
+}

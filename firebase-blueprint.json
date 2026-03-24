@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "FileNode": {
+      "title": "File Node",
+      "description": "A file or folder in the user's directory tree.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["file", "folder"] },
+        "parentId": { "type": ["string", "null"] },
+        "content": { "type": "string" },
+        "uid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type", "uid", "updatedAt", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/nodes/{nodeId}": {
+      "schema": "FileNode",
+      "description": "Collection of files and folders."
+    }
+  }
+}
