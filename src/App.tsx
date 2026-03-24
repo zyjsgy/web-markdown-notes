@@ -20,7 +20,6 @@ import {
   Image as ImageIcon, 
   Code, 
   Edit3, 
-  Sparkles, 
   Download, 
   Copy,
   Check,
@@ -32,19 +31,16 @@ import {
   Folder,
   FileText,
   Plus,
-  MoreVertical,
   Trash2,
   FolderPlus,
   FilePlus,
   Sun,
   Moon,
   PanelLeft,
-  PanelRight,
   Search,
   Settings,
   X
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import { cn } from './lib/utils';
 import { 
   auth, 
@@ -123,8 +119,6 @@ interface FileNode {
 export default function App() {
   const [markdown, setMarkdown] = useState(INITIAL_MARKDOWN);
   const [viewMode, setViewMode] = useState<'split' | 'editor' | 'preview'>('split');
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -135,8 +129,6 @@ export default function App() {
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
   // Auth Listener
   useEffect(() => {
@@ -224,26 +216,6 @@ export default function App() {
       await signOut(auth);
     } catch (error) {
       console.error("Logout failed:", error);
-    }
-  };
-
-  const handleAiAction = async (prompt: string) => {
-    setIsAiLoading(true);
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `${prompt}\n\nContent:\n${markdown}`,
-        config: {
-          systemInstruction: "You are a professional writing assistant. Return ONLY the improved markdown content without any explanations or conversational text.",
-        }
-      });
-      if (response.text) {
-        setMarkdown(response.text.trim());
-      }
-    } catch (error) {
-      console.error("AI Action failed:", error);
-    } finally {
-      setIsAiLoading(false);
     }
   };
 
@@ -481,29 +453,6 @@ export default function App() {
             <ToolbarButton icon={<Copy className="w-4 h-4" />} onClick={() => { navigator.clipboard.writeText(markdown); setCopied(true); setTimeout(() => setCopied(false), 2000); }} title="Copy" />
             <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download" />
           </div>
-
-          <button 
-            onClick={() => setIsAiOpen(!isAiOpen)}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border",
-              isAiOpen ? "bg-[#1C1917] dark:bg-white text-white dark:text-[#1C1917] border-transparent" : "bg-white dark:bg-black text-[#1C1917] dark:text-white border-[#E7E5E4] dark:border-[#292524]"
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            AI Assistant
-          </button>
-        </div>
-
-        {/* AI Panel (Collapsible) */}
-        <div className={cn(
-          "bg-white dark:bg-black border-b border-[#E7E5E4] dark:border-[#292524] overflow-hidden transition-all duration-300",
-          isAiOpen ? "h-12 opacity-100" : "h-0 opacity-0"
-        )}>
-          <div className="flex items-center justify-center h-full gap-4">
-            <AiButton label="Improve" onClick={() => handleAiAction("Improve the writing, make it more professional and engaging.")} loading={isAiLoading} />
-            <AiButton label="Summarize" onClick={() => handleAiAction("Summarize this content into a concise version.")} loading={isAiLoading} />
-            <AiButton label="Fix Grammar" onClick={() => handleAiAction("Fix any grammar or spelling mistakes.")} loading={isAiLoading} />
-          </div>
         </div>
 
         {/* Editor/Preview Area */}
@@ -564,10 +513,6 @@ export default function App() {
             <span>{markdown.split(/\s+/).filter(Boolean).length} Words</span>
             {user && activeFileId && <span className="text-green-600 flex items-center gap-1.5"><Check className="w-3 h-3" /> Saved to Cloud</span>}
           </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3 h-3" />
-            AI Powered Workspace
-          </div>
         </footer>
       </div>
     </div>
@@ -579,24 +524,6 @@ function ToolbarButton({ icon, onClick, title }: { icon: React.ReactNode, onClic
   return (
     <button onClick={onClick} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-[#292524] rounded-md transition-colors text-[#78716C] hover:text-[#1C1917] dark:hover:text-white" title={title}>
       {icon}
-    </button>
-  );
-}
-
-function AiButton({ label, onClick, loading }: { label: string, onClick: () => void, loading: boolean }) {
-  return (
-    <button 
-      onClick={onClick}
-      disabled={loading}
-      className={cn(
-        "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border",
-        loading 
-          ? "bg-[#F5F5F4] dark:bg-[#1C1917] text-[#A8A29E] border-[#E7E5E4] dark:border-[#292524] cursor-not-allowed" 
-          : "bg-white dark:bg-black text-[#1C1917] dark:text-white border-[#E7E5E4] dark:border-[#292524] hover:border-[#1C1917] dark:hover:border-white hover:bg-[#1C1917] dark:hover:bg-white hover:text-white dark:hover:text-[#1C1917]"
-      )}
-    >
-      {loading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-      {label}
     </button>
   );
 }
