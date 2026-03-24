@@ -32,4 +32,15 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Force remove borders and override background from SyntaxHighlighter pre and code elements */
+  pre[class*="language-"],
+  pre[class*="language-"] code,
+  pre[class*="language-"] span {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background: #F5F5F4 !important;
+    color: #1C1917 !important;
+  }
 }
