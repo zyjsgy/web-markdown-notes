@@ -98,7 +98,9 @@ Markdown Pro is a professional-grade editor with real-time preview and AI-powere
 
 ### Code Example
 \`\`\`python
+# 这是一个 Python 示例 (This is a Python example)
 def hello():
+    # 打印欢迎信息 (Print welcome message)
     print("Hello, Markdown with Python!")
 \`\`\`
 
@@ -627,8 +629,8 @@ export default function App() {
                           style={darkMode ? vscDarkPlus : vs}
                           language={match[1]}
                           PreTag="pre"
-                          customStyle={{ border: 'none', margin: 0, background: 'transparent', fontFamily: 'inherit' }}
-                          codeTagProps={{ style: { fontFamily: 'inherit' } }}
+                          customStyle={{ border: 'none', margin: 0, background: 'transparent', fontFamily: 'var(--font-mono)' }}
+                          codeTagProps={{ className: "font-mono !font-normal" }}
                           className={cn("rounded-2xl !p-6 shadow-sm", darkMode ? "!bg-[#0D0D0D]" : "!bg-claude-sidebar")}
                           {...props}
                         >
