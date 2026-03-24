@@ -127,7 +127,16 @@ export default function App() {
   const [nodes, setNodes] = useState<FileNode[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [darkMode, setDarkMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   // Auth Listener
   useEffect(() => {
@@ -317,19 +326,19 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden font-sans transition-colors duration-200 bg-[#F5F5F4] text-[#1C1917]">
+    <div className="flex h-screen overflow-hidden font-sans transition-colors duration-200 bg-[#F5F5F4] dark:bg-[#1C1917] text-[#1C1917] dark:text-[#F5F5F4]">
       {/* Sidebar */}
       <aside className={cn(
-        "flex flex-col border-r border-[#E7E5E4] bg-white transition-all duration-300",
+        "flex flex-col border-r border-[#E7E5E4] dark:border-stone-800 bg-white dark:bg-stone-900 transition-all duration-300",
         isSidebarOpen ? "w-64" : "w-0 overflow-hidden"
       )}>
-        <div className="p-4 flex items-center justify-between border-b border-[#E7E5E4]">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-[#A8A29E]">Explorer</h2>
+        <div className="p-4 flex items-center justify-between border-b border-[#E7E5E4] dark:border-stone-800">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-[#A8A29E] dark:text-stone-500">Explorer</h2>
           <div className="flex items-center gap-1">
-            <button onClick={() => createNode('folder')} className="p-1.5 hover:bg-[#F5F5F4] rounded-md text-[#78716C]" title="New Folder">
+            <button onClick={() => createNode('folder')} className="p-1.5 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md text-[#78716C] dark:text-stone-400" title="New Folder">
               <FolderPlus className="w-4 h-4" />
             </button>
-            <button onClick={() => createNode('file')} className="p-1.5 hover:bg-[#F5F5F4] rounded-md text-[#78716C]" title="New File">
+            <button onClick={() => createNode('file')} className="p-1.5 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md text-[#78716C] dark:text-stone-400" title="New File">
               <Plus className="w-4 h-4" />
             </button>
           </div>
@@ -355,9 +364,12 @@ export default function App() {
             </div>
           )}
         </div>
-        <div className="p-4 border-t border-[#E7E5E4]">
-          <div className="flex items-center justify-end">
-            <button className="p-2 hover:bg-[#F5F5F4] rounded-lg text-[#78716C]">
+        <div className="p-4 border-t border-[#E7E5E4] dark:border-stone-800">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-lg text-[#78716C] dark:text-stone-400">
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-lg text-[#78716C] dark:text-stone-400">
               <Settings className="w-4 h-4" />
             </button>
           </div>
@@ -367,21 +379,21 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-[#E7E5E4] shadow-sm z-10">
+        <header className="flex items-center justify-between px-6 py-3 bg-white dark:bg-stone-900 border-b border-[#E7E5E4] dark:border-stone-800 shadow-sm z-10">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#F5F5F4] rounded-lg text-[#78716C]">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-lg text-[#78716C] dark:text-stone-400">
               <PanelLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#1C1917] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#1C1917] dark:bg-stone-700 rounded-lg flex items-center justify-center">
                 <Edit3 className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-sm font-bold tracking-tight hidden sm:block">Markdown Pro</h1>
             </div>
             {activeFileId && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-[#F5F5F4] rounded-full border border-[#E7E5E4]">
-                <FileText className="w-3 h-3 text-[#78716C]" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#44403C]">
+              <div className="flex items-center gap-2 px-3 py-1 bg-[#F5F5F4] dark:bg-stone-800 rounded-full border border-[#E7E5E4] dark:border-stone-700">
+                <FileText className="w-3 h-3 text-[#78716C] dark:text-stone-400" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#44403C] dark:text-stone-300">
                   {nodes.find(n => n.id === activeFileId)?.name}
                 </span>
               </div>
@@ -461,7 +473,7 @@ export default function App() {
 
           {(viewMode === 'split' || viewMode === 'preview') && (
             <div className="flex-1 overflow-y-auto bg-[#FAFAF9] p-8">
-              <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-bold [&_p]:leading-relaxed [&_a]:text-blue-500 [&_img]:rounded-2xl">
+              <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-6 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_p]:leading-relaxed [&_p]:my-4 [&_a]:text-blue-500 [&_img]:rounded-2xl [&_img]:my-6 [&_blockquote]:border-l-4 [&_blockquote]:border-stone-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-stone-600 [&_blockquote]:my-4 [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_th]:border [&_th]:border-stone-300 [&_th]:p-2 [&_th]:bg-stone-100 [&_td]:border [&_td]:border-stone-300 [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-stone-100 [&_code]:px-1 [&_code]:rounded">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
