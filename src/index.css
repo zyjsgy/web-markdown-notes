@@ -63,6 +63,22 @@
     outline: none !important;
     background: #F5F5F4 !important;
     color: #1C1917 !important;
-    font-family: var(--font-mono), var(--font-sans) !important;
+    font-family: "JetBrains Mono", "Fira Code", "PingFang SC", "Microsoft YaHei", ui-monospace, monospace !important;
+    font-style: normal !important; /* Disable italics for everything in code blocks */
+  }
+
+  .dark pre[class*="language-"],
+  .dark pre[class*="language-"] code,
+  .dark pre[class*="language-"] span {
+    background: #0D0D0D !important;
+    color: #E6E1DB !important;
+  }
+
+  /* Task list styling */
+  .markdown-body input[type="checkbox"] {
+    @apply w-4 h-4 rounded border-claude-border text-claude-accent focus:ring-claude-accent mr-2 align-middle;
+  }
+  .markdown-body .task-list-item {
+    @apply list-none flex items-center my-1;
   }
 }

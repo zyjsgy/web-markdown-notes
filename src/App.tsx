@@ -40,7 +40,9 @@ import {
   PanelLeft,
   Search,
   Settings,
-  X
+  X,
+  Sparkles,
+  CheckSquare
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { 
@@ -77,6 +79,15 @@ Markdown Pro is a professional-grade editor with real-time preview and AI-powere
 - **AI Assistant**: Use Gemini to improve your writing.
 - **GFM Support**: Tables, task lists, and more.
 - **Responsive**: Works on all devices.
+- **Cloud Sync**: Sign in to save and sync your files.
+- **Drag & Drop**: Organize your files easily.
+- **Task Lists**: Keep track of your to-dos.
+
+### To-Do List
+- [x] Create a professional markdown editor
+- [x] Add Claude-inspired styling
+- [ ] Write a best-selling novel
+- [ ] World domination (maybe later)
 
 ### Try a Table
 | Feature | Status |
@@ -126,7 +137,7 @@ export default function App() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [nodes, setNodes] = useState<FileNode[]>([]);
-  const [activeFileId, setActiveFileId] = useState<string | null>(null);
+  const [activeFileId, setActiveFileId] = useState<string | null>('welcome');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -149,7 +160,7 @@ export default function App() {
       setIsAuthReady(true);
       if (!currentUser) {
         setNodes([]);
-        setActiveFileId(null);
+        setActiveFileId('welcome');
         setMarkdown(INITIAL_MARKDOWN);
       }
     });
@@ -183,6 +194,13 @@ export default function App() {
   // Active File Sync
   useEffect(() => {
     if (!activeFileId) return;
+    if (activeFileId === 'welcome') {
+      if (markdown !== INITIAL_MARKDOWN) {
+        setMarkdown(INITIAL_MARKDOWN);
+        lastSyncedContent.current = INITIAL_MARKDOWN;
+      }
+      return;
+    }
     const activeFile = nodes.find(n => n.id === activeFileId);
     if (activeFile && activeFile.content !== undefined) {
       // Only update local state if the server content is actually different from what we have
@@ -199,7 +217,7 @@ export default function App() {
 
   // Auto-save
   useEffect(() => {
-    if (!user || !activeFileId) return;
+    if (!user || !activeFileId || activeFileId === 'welcome') return;
 
     const timer = setTimeout(async () => {
       try {
@@ -438,6 +456,18 @@ export default function App() {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-3 no-scrollbar">
+          <div 
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-claude-bg dark:hover:bg-claude-dark-bg transition-all rounded-xl group relative mb-2",
+              activeFileId === 'welcome' ? "bg-claude-bg dark:bg-claude-dark-bg text-claude-accent" : "text-claude-text/70 dark:text-claude-dark-text/70"
+            )}
+            onClick={() => setActiveFileId('welcome')}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-claude-accent" />
+            <span className="text-xs font-medium truncate flex-1">Welcome Guide</span>
+          </div>
+          <div className="h-px bg-claude-border dark:bg-claude-dark-border mx-2 mb-4 opacity-50" />
+
           {user ? (
             nodes.length > 0 ? renderTree() : (
               <div className="p-6 text-center">
@@ -486,9 +516,13 @@ export default function App() {
             </div>
             {activeFileId && (
               <div className="flex items-center gap-2 px-4 py-1.5 bg-claude-sidebar dark:bg-claude-dark-sidebar rounded-full border border-claude-border dark:border-claude-dark-border">
-                <FileText className="w-3.5 h-3.5 text-claude-accent" />
+                {activeFileId === 'welcome' ? (
+                  <Sparkles className="w-3.5 h-3.5 text-claude-accent" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5 text-claude-accent" />
+                )}
                 <span className="text-[11px] font-bold uppercase tracking-widest text-claude-text/80 dark:text-claude-dark-text/80">
-                  {nodes.find(n => n.id === activeFileId)?.name}
+                  {activeFileId === 'welcome' ? 'Welcome Guide' : nodes.find(n => n.id === activeFileId)?.name}
                 </span>
               </div>
             )}
@@ -521,17 +555,25 @@ export default function App() {
         {/* Toolbar */}
         <div className="flex items-center justify-between px-8 py-2.5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-1.5">
-            <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" />
-            <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" />
+            <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" disabled={activeFileId === 'welcome'} />
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
-            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => insertText('\n- ')} title="Unordered List" />
-            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => insertText('\n1. ')} title="Ordered List" />
+            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => insertText('\n- ')} title="Unordered List" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => insertText('\n1. ')} title="Ordered List" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<CheckSquare className="w-4 h-4" />} onClick={() => insertText('\n- [ ] ')} title="Task List" disabled={activeFileId === 'welcome'} />
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
-            <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} onClick={() => insertText('[', '](url)')} title="Link" />
-            <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" />
+            <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} onClick={() => insertText('[', '](url)')} title="Link" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" disabled={activeFileId === 'welcome'} />
             
             <div className="relative">
-              <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-1.5 p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white">
+              <button 
+                onClick={() => setShowLangMenu(!showLangMenu)} 
+                disabled={activeFileId === 'welcome'}
+                className={cn(
+                  "flex items-center gap-1.5 p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white",
+                  activeFileId === 'welcome' && "opacity-50 cursor-not-allowed"
+                )}
+              >
                 <Code className="w-4 h-4" />
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
@@ -561,7 +603,11 @@ export default function App() {
                 ref={textareaRef}
                 value={markdown}
                 onChange={(e) => setMarkdown(e.target.value)}
-                className="flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent"
+                readOnly={activeFileId === 'welcome'}
+                className={cn(
+                  "flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent",
+                  activeFileId === 'welcome' && "opacity-80 cursor-default"
+                )}
                 placeholder="Start writing markdown..."
                 spellCheck={false}
               />
@@ -570,7 +616,7 @@ export default function App() {
 
           {(viewMode === 'split' || viewMode === 'preview') && (
             <div className="flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10">
-              <div className="max-w-3xl mx-auto [&_h1]:text-5xl [&_h1]:font-serif [&_h1]:font-bold [&_h1]:mb-8 [&_h1]:text-claude-text dark:[&_h1]:text-white [&_h2]:text-3xl [&_h2]:font-serif [&_h2]:font-bold [&_h2]:mt-12 [&_h2]:mb-6 [&_h2]:text-claude-text dark:[&_h2]:text-white [&_h3]:text-2xl [&_h3]:font-serif [&_h3]:font-bold [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:text-claude-text dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-5 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-3xl [&_img]:my-8 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-6 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:my-8 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-3 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-3 [&_ul]:list-disc [&_ul]:pl-8 [&_ul]:my-5 [&_ol]:list-decimal [&_ol]:pl-8 [&_ol]:my-5 [&_li]:my-2 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-2 [&_code]:py-0.5 [&_code]:rounded-lg">
+              <div className="max-w-3xl mx-auto markdown-body [&_h1]:text-5xl [&_h1]:font-serif [&_h1]:font-bold [&_h1]:mb-8 [&_h1]:text-claude-text dark:[&_h1]:text-white [&_h2]:text-3xl [&_h2]:font-serif [&_h2]:font-bold [&_h2]:mt-12 [&_h2]:mb-6 [&_h2]:text-claude-text dark:[&_h2]:text-white [&_h3]:text-2xl [&_h3]:font-serif [&_h3]:font-bold [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:text-claude-text dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-5 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-3xl [&_img]:my-8 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-6 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:my-8 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-3 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-3 [&_ul]:list-disc [&_ul]:pl-8 [&_ul]:my-5 [&_ol]:list-decimal [&_ol]:pl-8 [&_ol]:my-5 [&_li]:my-2 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-2 [&_code]:py-0.5 [&_code]:rounded-lg">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -617,9 +663,17 @@ export default function App() {
   );
 }
 
-function ToolbarButton({ icon, onClick, title }: { icon: React.ReactNode, onClick: () => void, title: string }) {
+function ToolbarButton({ icon, onClick, title, disabled }: { icon: React.ReactNode, onClick: () => void, title: string, disabled?: boolean }) {
   return (
-    <button onClick={onClick} className="p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white" title={title}>
+    <button 
+      onClick={onClick} 
+      disabled={disabled}
+      className={cn(
+        "p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
+      title={title}
+    >
       {icon}
     </button>
   );
