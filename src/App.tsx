@@ -422,32 +422,32 @@ export default function App() {
         </header>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-2 bg-white border-b border-[#E7E5E4] overflow-x-auto no-scrollbar">
+        <div className="flex items-center justify-between px-6 py-2 bg-white dark:bg-stone-900 border-b border-[#E7E5E4] dark:border-stone-800 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-1">
             <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" />
             <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" />
-            <div className="w-px h-4 bg-[#E7E5E4] mx-1" />
+            <div className="w-px h-4 bg-[#E7E5E4] dark:bg-stone-700 mx-1" />
             <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => insertText('\n- ')} title="Unordered List" />
             <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => insertText('\n1. ')} title="Ordered List" />
-            <div className="w-px h-4 bg-[#E7E5E4] mx-1" />
+            <div className="w-px h-4 bg-[#E7E5E4] dark:bg-stone-700 mx-1" />
             <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} onClick={() => insertText('[', '](url)')} title="Link" />
             <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" />
             
             <div className="relative">
-              <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-1 p-2 hover:bg-[#F5F5F4] rounded-md transition-colors text-[#78716C] hover:text-[#1C1917]">
+              <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-1 p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md transition-colors text-[#78716C] dark:text-stone-400 hover:text-[#1C1917] dark:hover:text-white">
                 <Code className="w-4 h-4" />
                 <ChevronDown className="w-3 h-3" />
               </button>
               {showLangMenu && (
-                <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-[#E7E5E4] rounded-lg shadow-lg z-50 py-1">
+                <div className="absolute top-full left-0 mt-1 w-32 bg-white dark:bg-stone-800 border border-[#E7E5E4] dark:border-stone-700 rounded-lg shadow-lg z-50 py-1">
                   {LANGUAGES.map(lang => (
-                    <button key={lang.value} onClick={() => insertCodeBlock(lang.value)} className="w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#F5F5F4] text-[#44403C]">{lang.label}</button>
+                    <button key={lang.value} onClick={() => insertCodeBlock(lang.value)} className="w-full text-left px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#F5F5F4] dark:hover:bg-stone-700 text-[#44403C] dark:text-stone-300">{lang.label}</button>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="w-px h-4 bg-[#E7E5E4] mx-1" />
+            <div className="w-px h-4 bg-[#E7E5E4] dark:bg-stone-700 mx-1" />
             <ToolbarButton icon={<Copy className="w-4 h-4" />} onClick={() => { navigator.clipboard.writeText(markdown); setCopied(true); setTimeout(() => setCopied(false), 2000); }} title="Copy" />
             <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download" />
           </div>
@@ -457,14 +457,14 @@ export default function App() {
         <main className="flex-1 flex overflow-hidden">
           {(viewMode === 'split' || viewMode === 'editor') && (
             <div className={cn(
-              "flex-1 flex flex-col bg-white",
-              viewMode === 'split' ? "border-r border-[#E7E5E4]" : ""
+              "flex-1 flex flex-col bg-white dark:bg-[#1C1917]",
+              viewMode === 'split' ? "border-r border-[#E7E5E4] dark:border-stone-800" : ""
             )}>
               <textarea
                 ref={textareaRef}
                 value={markdown}
                 onChange={(e) => setMarkdown(e.target.value)}
-                className="flex-1 p-8 resize-none focus:outline-none font-mono text-sm leading-relaxed text-[#44403C] bg-transparent"
+                className="flex-1 p-8 resize-none focus:outline-none font-mono text-sm leading-relaxed text-[#44403C] dark:text-stone-300 bg-transparent"
                 placeholder="Start writing markdown..."
                 spellCheck={false}
               />
@@ -472,8 +472,8 @@ export default function App() {
           )}
 
           {(viewMode === 'split' || viewMode === 'preview') && (
-            <div className="flex-1 overflow-y-auto bg-[#FAFAF9] p-8">
-              <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-6 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_p]:leading-relaxed [&_p]:my-4 [&_a]:text-blue-500 [&_img]:rounded-2xl [&_img]:my-6 [&_blockquote]:border-l-4 [&_blockquote]:border-stone-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-stone-600 [&_blockquote]:my-4 [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_th]:border [&_th]:border-stone-300 [&_th]:p-2 [&_th]:bg-stone-100 [&_td]:border [&_td]:border-stone-300 [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-stone-100 [&_code]:px-1 [&_code]:rounded">
+            <div className="flex-1 overflow-y-auto bg-[#FAFAF9] dark:bg-[#1C1917] p-8">
+              <div className="max-w-3xl mx-auto [&_h1]:text-4xl [&_h1]:font-bold [&_h1]:mb-6 [&_h1]:text-[#1C1917] dark:[&_h1]:text-white [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-[#1C1917] dark:[&_h2]:text-white [&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-[#1C1917] dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-4 [&_p]:text-[#44403C] dark:[&_p]:text-stone-300 [&_a]:text-blue-500 [&_img]:rounded-2xl [&_img]:my-6 [&_blockquote]:border-l-4 [&_blockquote]:border-stone-300 dark:[&_blockquote]:border-stone-700 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-stone-600 dark:[&_blockquote]:text-stone-400 [&_blockquote]:my-4 [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_th]:border [&_th]:border-stone-300 dark:[&_th]:border-stone-700 [&_th]:p-2 [&_th]:bg-stone-100 dark:[&_th]:bg-stone-800 [&_td]:border [&_td]:border-stone-300 dark:[&_td]:border-stone-700 [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-stone-100 dark:[&_code]:bg-stone-800 [&_code]:px-1 [&_code]:rounded">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -481,17 +481,17 @@ export default function App() {
                       const match = /language-(\w+)/.exec(className || '');
                       return !inline && match ? (
                         <SyntaxHighlighter
-                          style={vs}
+                          style={darkMode ? vscDarkPlus : vs}
                           language={match[1]}
                           PreTag="pre"
-                          customStyle={{ border: 'none', margin: 0 }}
-                          className="rounded-xl !bg-[#F5F5F4] !p-4"
+                          customStyle={{ border: 'none', margin: 0, background: 'transparent' }}
+                          className={cn("rounded-xl !p-4", darkMode ? "!bg-stone-950" : "!bg-[#F5F5F4]")}
                           {...props}
                         >
                           {String(children).replace(/\n$/, '')}
                         </SyntaxHighlighter>
                       ) : (
-                        <code className={cn("bg-[#F5F5F4] px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
+                        <code className={cn("bg-[#F5F5F4] dark:bg-stone-800 px-1.5 py-0.5 rounded text-sm font-mono", className)} {...props}>
                           {children}
                         </code>
                       );
@@ -506,7 +506,7 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="px-6 py-2 bg-white border-t border-[#E7E5E4] flex items-center justify-between text-[10px] font-bold text-[#A8A29E] uppercase tracking-widest">
+        <footer className="px-6 py-2 bg-white dark:bg-stone-900 border-t border-[#E7E5E4] dark:border-stone-800 flex items-center justify-between text-[10px] font-bold text-[#A8A29E] dark:text-stone-500 uppercase tracking-widest">
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5"><Search className="w-3 h-3" /> {markdown.length} Characters</span>
             <span>{markdown.split(/\s+/).filter(Boolean).length} Words</span>
@@ -521,7 +521,7 @@ export default function App() {
 
 function ToolbarButton({ icon, onClick, title }: { icon: React.ReactNode, onClick: () => void, title: string }) {
   return (
-    <button onClick={onClick} className="p-2 hover:bg-[#F5F5F4] rounded-md transition-colors text-[#78716C] hover:text-[#1C1917]" title={title}>
+    <button onClick={onClick} className="p-2 hover:bg-[#F5F5F4] dark:hover:bg-stone-800 rounded-md transition-colors text-[#78716C] dark:text-stone-400 hover:text-[#1C1917] dark:hover:text-white" title={title}>
       {icon}
     </button>
   );
