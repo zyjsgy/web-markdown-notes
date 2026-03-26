@@ -145,8 +145,61 @@ export default function App() {
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const lastSyncedContent = useRef<string | null>(null);
   const collapsedHeadingsRef = useRef<Set<string>>(new Set());
+  const isScrollingEditor = useRef(false);
+  const isScrollingPreview = useRef(false);
+  const editorScrollTimeout = useRef<NodeJS.Timeout | null>(null);
+  const previewScrollTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleEditorScroll = () => {
+    if (viewMode !== 'split') return;
+    if (isScrollingPreview.current) return;
+    if (!textareaRef.current || !previewRef.current) return;
+
+    isScrollingEditor.current = true;
+    const { scrollTop, scrollHeight, clientHeight } = textareaRef.current;
+    
+    if (scrollHeight <= clientHeight) return;
+    
+    const percentage = scrollTop / (scrollHeight - clientHeight);
+    previewRef.current.scrollTop = percentage * (previewRef.current.scrollHeight - previewRef.current.clientHeight);
+
+    if (editorScrollTimeout.current) clearTimeout(editorScrollTimeout.current);
+    editorScrollTimeout.current = setTimeout(() => {
+      isScrollingEditor.current = false;
+    }, 50);
+  };
+
+  const handlePreviewScroll = () => {
+    if (viewMode !== 'split') return;
+    if (isScrollingEditor.current) return;
+    if (!textareaRef.current || !previewRef.current) return;
+
+    isScrollingPreview.current = true;
+    const { scrollTop, scrollHeight, clientHeight } = previewRef.current;
+    
+    if (scrollHeight <= clientHeight) return;
+
+    const percentage = scrollTop / (scrollHeight - clientHeight);
+    textareaRef.current.scrollTop = percentage * (textareaRef.current.scrollHeight - textareaRef.current.clientHeight);
+
+    if (previewScrollTimeout.current) clearTimeout(previewScrollTimeout.current);
+    previewScrollTimeout.current = setTimeout(() => {
+      isScrollingPreview.current = false;
+    }, 50);
+  };
+
+  // Sync scroll on content change
+  useEffect(() => {
+    if (viewMode === 'split') {
+      const timer = setTimeout(() => {
+        handleEditorScroll();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [markdown, viewMode]);
 
   // Collapsible Headings Logic
   useEffect(() => {
@@ -686,6 +739,7 @@ export default function App() {
                 ref={textareaRef}
                 value={markdown}
                 onChange={(e) => setMarkdown(e.target.value)}
+                onScroll={handleEditorScroll}
                 readOnly={activeFileId === 'welcome'}
                 className={cn(
                   "flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent",
@@ -698,7 +752,11 @@ export default function App() {
           )}
 
           {(viewMode === 'split' || viewMode === 'preview') && (
-            <div className="flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10">
+            <div 
+              ref={previewRef}
+              onScroll={handlePreviewScroll}
+              className="flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10"
+            >
               <div className="max-w-3xl mx-auto markdown-body [&_h1]:text-5xl [&_h1]:font-serif [&_h1]:font-bold [&_h1]:mb-8 [&_h1]:text-claude-text dark:[&_h1]:text-white [&_h2]:text-3xl [&_h2]:font-serif [&_h2]:font-bold [&_h2]:mt-12 [&_h2]:mb-6 [&_h2]:text-claude-text dark:[&_h2]:text-white [&_h3]:text-2xl [&_h3]:font-serif [&_h3]:font-bold [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:text-claude-text dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-5 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-3xl [&_img]:my-8 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-6 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:my-8 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-3 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-3 [&_ul]:list-disc [&_ul]:pl-8 [&_ul]:my-5 [&_ol]:list-decimal [&_ol]:pl-8 [&_ol]:my-5 [&_li]:my-2 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-sm [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-2 [&_code]:py-0.5 [&_code]:rounded-lg">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
