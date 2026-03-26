@@ -1,5 +1,14 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  User,
+  setPersistence,
+  browserSessionPersistence
+} from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, getDocFromServer } from 'firebase/firestore';
 
 import firebaseConfig from '../firebase-applet-config.json';
@@ -7,6 +16,12 @@ import firebaseConfig from '../firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+// Set persistence to session-only to avoid local cache on company computers
+setPersistence(auth, browserSessionPersistence).catch((error) => {
+  console.error("Failed to set auth persistence:", error);
+});
+
 export const googleProvider = new GoogleAuthProvider();
 
 export { signInWithPopup, signOut, onAuthStateChanged, doc, setDoc, getDoc, onSnapshot };

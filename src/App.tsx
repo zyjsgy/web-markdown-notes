@@ -146,6 +146,87 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSyncedContent = useRef<string | null>(null);
+  const collapsedHeadingsRef = useRef<Set<string>>(new Set());
+
+  // Collapsible Headings Logic
+  useEffect(() => {
+    const container = document.querySelector('.markdown-body');
+    if (!container) return;
+
+    const updateVisibility = () => {
+      const elements = Array.from(container.children);
+      let currentCollapsedLevel = 7;
+
+      elements.forEach((el) => {
+        const tagName = el.tagName.toLowerCase();
+        const isHeading = /^h[1-6]$/.test(tagName);
+        const level = isHeading ? parseInt(tagName[1]) : 7;
+
+        if (isHeading) {
+          if (level <= currentCollapsedLevel) {
+            currentCollapsedLevel = 7;
+          }
+          if ((el as HTMLElement).dataset.collapsed === 'true' && currentCollapsedLevel === 7) {
+            currentCollapsedLevel = level;
+          }
+        }
+
+        if (!isHeading || level > currentCollapsedLevel) {
+           if (currentCollapsedLevel < 7) {
+             (el as HTMLElement).style.display = 'none';
+           } else {
+             (el as HTMLElement).style.display = '';
+           }
+        }
+      });
+    };
+
+    const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+    headings.forEach((heading) => {
+      const htmlHeading = heading as HTMLElement;
+      if (htmlHeading.dataset.initialized === 'true') return;
+      
+      const headingText = htmlHeading.textContent || '';
+      const headingKey = `${htmlHeading.tagName}-${headingText}`;
+      
+      htmlHeading.dataset.initialized = 'true';
+      htmlHeading.classList.add('group', 'cursor-pointer', 'relative');
+      
+      const isCollapsed = collapsedHeadingsRef.current.has(headingKey);
+      htmlHeading.dataset.collapsed = isCollapsed ? 'true' : 'false';
+
+      const toggleContainer = document.createElement('div');
+      toggleContainer.className = 'absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 text-claude-text/40 hover:text-claude-text/80 dark:text-claude-dark-text/40 dark:hover:text-claude-dark-text/80 p-1 flex items-center justify-center';
+      toggleContainer.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;"><path d="m6 9 6 6 6-6"/></svg>`;
+
+      htmlHeading.appendChild(toggleContainer);
+
+      htmlHeading.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('a')) return;
+        
+        const currentlyCollapsed = htmlHeading.dataset.collapsed === 'true';
+        const newState = !currentlyCollapsed;
+        
+        htmlHeading.dataset.collapsed = newState ? 'true' : 'false';
+        const svg = toggleContainer.querySelector('svg');
+        if (svg) {
+          svg.style.transform = newState ? 'rotate(-90deg)' : 'rotate(0deg)';
+        }
+
+        if (newState) {
+          collapsedHeadingsRef.current.add(headingKey);
+        } else {
+          collapsedHeadingsRef.current.delete(headingKey);
+        }
+
+        updateVisibility();
+      });
+    });
+
+    updateVisibility();
+
+  }, [markdown, viewMode]);
 
   useEffect(() => {
     if (darkMode) {
