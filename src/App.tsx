@@ -136,6 +136,19 @@ const withLine = (Tag: any) => {
   return ({node, ...props}: any) => <Tag data-line={node?.position?.start?.line} {...props} />;
 };
 
+const P = withLine('p');
+const H1 = withLine('h1');
+const H2 = withLine('h2');
+const H3 = withLine('h3');
+const H4 = withLine('h4');
+const H5 = withLine('h5');
+const H6 = withLine('h6');
+const Ul = withLine('ul');
+const Ol = withLine('ol');
+const Li = withLine('li');
+const Blockquote = withLine('blockquote');
+const Table = withLine('table');
+
 export default function App() {
   const [markdown, setMarkdown] = useState(INITIAL_MARKDOWN);
   const [viewMode, setViewMode] = useState<'split' | 'editor' | 'preview'>('split');
@@ -231,43 +244,53 @@ export default function App() {
 
     headings.forEach((heading) => {
       const htmlHeading = heading as HTMLElement;
-      if (htmlHeading.dataset.initialized === 'true') return;
+      
+      // Check if the toggle container is already there
+      const hasToggle = htmlHeading.querySelector('.heading-toggle');
+      if (hasToggle) return;
       
       const headingText = htmlHeading.textContent || '';
       const headingKey = `${htmlHeading.tagName}-${headingText}`;
       
-      htmlHeading.dataset.initialized = 'true';
       htmlHeading.classList.add('group', 'cursor-pointer', 'relative');
       
       const isCollapsed = collapsedHeadingsRef.current.has(headingKey);
       htmlHeading.dataset.collapsed = isCollapsed ? 'true' : 'false';
 
       const toggleContainer = document.createElement('div');
-      toggleContainer.className = 'absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 text-claude-text/40 hover:text-claude-text/80 dark:text-claude-dark-text/40 dark:hover:text-claude-dark-text/80 p-1 flex items-center justify-center';
+      toggleContainer.className = 'heading-toggle absolute -left-6 sm:-left-8 top-1/2 -translate-y-1/2 opacity-40 group-hover:opacity-100 transition-all duration-200 text-claude-text/60 hover:text-claude-text dark:text-claude-dark-text/60 dark:hover:text-claude-dark-text p-1 flex items-center justify-center';
       toggleContainer.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;"><path d="m6 9 6 6 6-6"/></svg>`;
 
       htmlHeading.appendChild(toggleContainer);
 
-      htmlHeading.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('a')) return;
-        
-        const currentlyCollapsed = htmlHeading.dataset.collapsed === 'true';
-        const newState = !currentlyCollapsed;
-        
-        htmlHeading.dataset.collapsed = newState ? 'true' : 'false';
-        const svg = toggleContainer.querySelector('svg');
-        if (svg) {
-          svg.style.transform = newState ? 'rotate(-90deg)' : 'rotate(0deg)';
-        }
+      if (htmlHeading.dataset.hasClickListener !== 'true') {
+        htmlHeading.dataset.hasClickListener = 'true';
+        htmlHeading.addEventListener('mousedown', (e) => {
+          if ((e.target as HTMLElement).closest('.heading-toggle')) {
+            e.preventDefault();
+          }
+        });
+        htmlHeading.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).closest('a')) return;
+          
+          const currentlyCollapsed = htmlHeading.dataset.collapsed === 'true';
+          const newState = !currentlyCollapsed;
+          
+          htmlHeading.dataset.collapsed = newState ? 'true' : 'false';
+          const svg = htmlHeading.querySelector('.heading-toggle svg');
+          if (svg) {
+            (svg as HTMLElement).style.transform = newState ? 'rotate(-90deg)' : 'rotate(0deg)';
+          }
 
-        if (newState) {
-          collapsedHeadingsRef.current.add(headingKey);
-        } else {
-          collapsedHeadingsRef.current.delete(headingKey);
-        }
+          if (newState) {
+            collapsedHeadingsRef.current.add(headingKey);
+          } else {
+            collapsedHeadingsRef.current.delete(headingKey);
+          }
 
-        updateVisibility();
-      });
+          updateVisibility();
+        });
+      }
     });
 
     updateVisibility();
@@ -678,6 +701,44 @@ export default function App() {
     );
   };
 
+  const markdownComponents = useMemo(() => ({
+    p: P,
+    h1: H1,
+    h2: H2,
+    h3: H3,
+    h4: H4,
+    h5: H5,
+    h6: H6,
+    ul: Ul,
+    ol: Ol,
+    li: Li,
+    blockquote: Blockquote,
+    table: Table,
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      const line = node?.position?.start?.line;
+      return !inline && match ? (
+        <div data-line={line}>
+          <SyntaxHighlighter
+            style={darkMode ? vscDarkPlus : vs}
+            language={match[1]}
+            PreTag="pre"
+            customStyle={{ border: 'none', margin: 0, background: 'transparent', fontFamily: 'var(--font-mono)' }}
+            codeTagProps={{ className: "font-mono !font-normal" }}
+            className={cn("rounded-2xl !p-6 shadow-sm", darkMode ? "!bg-[#0D0D0D]" : "!bg-claude-sidebar")}
+            {...props}
+          >
+            {String(children).replace(/\n$/, '')}
+          </SyntaxHighlighter>
+        </div>
+      ) : (
+        <code className={cn("bg-claude-sidebar dark:bg-claude-dark-sidebar px-2 py-0.5 rounded-lg text-sm font-mono", className)} {...props}>
+          {children}
+        </code>
+      );
+    }
+  }), [darkMode]);
+
   return (
     <div className="flex h-screen overflow-hidden font-sans transition-colors duration-300 bg-claude-bg dark:bg-claude-dark-bg text-claude-text dark:text-claude-dark-text">
       {/* Sidebar */}
@@ -867,43 +928,7 @@ export default function App() {
               <div className="max-w-3xl mx-auto markdown-body text-sm [&_h1]:text-3xl [&_h1]:font-serif [&_h1]:font-bold [&_h1]:mb-6 [&_h1]:text-claude-text dark:[&_h1]:text-white [&_h2]:text-2xl [&_h2]:font-serif [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_h2]:text-claude-text dark:[&_h2]:text-white [&_h3]:text-xl [&_h3]:font-serif [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-3 [&_h3]:text-claude-text dark:[&_h3]:text-white [&_p]:leading-relaxed [&_p]:my-4 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-2xl [&_img]:my-6 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-4 [&_table]:w-full [&_table]:border-collapse [&_table]:my-6 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-2 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-xs [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
-                  components={{
-                    p: withLine('p'),
-                    h1: withLine('h1'),
-                    h2: withLine('h2'),
-                    h3: withLine('h3'),
-                    h4: withLine('h4'),
-                    h5: withLine('h5'),
-                    h6: withLine('h6'),
-                    ul: withLine('ul'),
-                    ol: withLine('ol'),
-                    li: withLine('li'),
-                    blockquote: withLine('blockquote'),
-                    table: withLine('table'),
-                    code({ node, inline, className, children, ...props }: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const line = node?.position?.start?.line;
-                      return !inline && match ? (
-                        <div data-line={line}>
-                          <SyntaxHighlighter
-                            style={darkMode ? vscDarkPlus : vs}
-                            language={match[1]}
-                            PreTag="pre"
-                            customStyle={{ border: 'none', margin: 0, background: 'transparent', fontFamily: 'var(--font-mono)' }}
-                            codeTagProps={{ className: "font-mono !font-normal" }}
-                            className={cn("rounded-2xl !p-6 shadow-sm", darkMode ? "!bg-[#0D0D0D]" : "!bg-claude-sidebar")}
-                            {...props}
-                          >
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        </div>
-                      ) : (
-                        <code className={cn("bg-claude-sidebar dark:bg-claude-dark-sidebar px-2 py-0.5 rounded-lg text-sm font-mono", className)} {...props}>
-                          {children}
-                        </code>
-                      );
-                    }
-                  }}
+                  components={markdownComponents}
                 >
                   {markdown}
                 </Markdown>
