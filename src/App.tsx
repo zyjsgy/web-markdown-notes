@@ -909,6 +909,20 @@ export default function App() {
                 onChange={(e) => setMarkdown(e.target.value)}
                 onKeyUp={handleCursorMove}
                 onClick={handleCursorMove}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const target = e.target as HTMLTextAreaElement;
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    const tab = '  ';
+                    const newText = markdown.substring(0, start) + tab + markdown.substring(end);
+                    setMarkdown(newText);
+                    setTimeout(() => {
+                      target.selectionStart = target.selectionEnd = start + tab.length;
+                    }, 0);
+                  }
+                }}
                 readOnly={activeFileId === 'welcome'}
                 className={cn(
                   "flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent",
