@@ -42,7 +42,9 @@ import {
   Settings,
   X,
   Sparkles,
-  CheckSquare
+  CheckSquare,
+  Printer,
+  FileCode
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { 
@@ -400,6 +402,118 @@ export default function App() {
     setShowLangMenu(false);
   };
 
+  const executePrint = () => {
+    const printContent = document.querySelector('.markdown-body');
+    if (!printContent) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    const headElements = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(el => el.outerHTML)
+      .join('\n');
+
+    const title = activeFileId === 'welcome' 
+      ? 'Welcome Guide' 
+      : nodes.find(n => n.id === activeFileId)?.name || 'Document';
+
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          ${headElements}
+          <style>
+            body { background: white !important; color: black !important; padding: 40px; }
+            .markdown-body { max-width: none !important; }
+            /* Hide collapse arrows */
+            .group > div { display: none !important; }
+            @media print {
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body class="bg-white">
+          <div class="markdown-body ${printContent.className}">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }, 500);
+  };
+
+  const handlePrint = () => {
+    if (viewMode === 'editor') {
+      setViewMode('preview');
+      setTimeout(executePrint, 100);
+    } else {
+      executePrint();
+    }
+  };
+
+  const executeDownloadHtml = () => {
+    const printContent = document.querySelector('.markdown-body');
+    if (!printContent) return;
+
+    const headElements = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(el => el.outerHTML)
+      .join('\n');
+
+    const title = activeFileId === 'welcome' 
+      ? 'Welcome Guide' 
+      : nodes.find(n => n.id === activeFileId)?.name || 'Document';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${title}</title>
+          ${headElements}
+          <style>
+            body { background: white !important; color: black !important; padding: 40px; max-width: 800px; margin: 0 auto; }
+            .group > div { display: none !important; }
+          </style>
+        </head>
+        <body class="bg-white">
+          <div class="markdown-body ${printContent.className}">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadHtml = () => {
+    if (viewMode === 'editor') {
+      setViewMode('preview');
+      setTimeout(executeDownloadHtml, 100);
+    } else {
+      executeDownloadHtml();
+    }
+  };
+
   const createNode = async (type: 'file' | 'folder', parentId: string | null = null) => {
     if (!user) return;
     const name = prompt(`Enter ${type} name:`);
@@ -715,7 +829,9 @@ export default function App() {
 
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
             <ToolbarButton icon={<Copy className="w-4 h-4" />} onClick={() => { navigator.clipboard.writeText(markdown); setCopied(true); setTimeout(() => setCopied(false), 2000); }} title="Copy" />
-            <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download" />
+            <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download Markdown" />
+            <ToolbarButton icon={<FileCode className="w-4 h-4" />} onClick={handleDownloadHtml} title="Download HTML" />
+            <ToolbarButton icon={<Printer className="w-4 h-4" />} onClick={handlePrint} title="Print Preview" />
           </div>
         </div>
 
