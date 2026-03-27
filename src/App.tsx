@@ -167,6 +167,41 @@ export default function App() {
   const previewRef = useRef<HTMLDivElement>(null);
   const lastSyncedContent = useRef<string | null>(null);
   const collapsedHeadingsRef = useRef<Set<string>>(new Set());
+  const activePaneRef = useRef<'editor' | 'preview' | null>(null);
+  const markdownRef = useRef(markdown);
+
+  useEffect(() => {
+    markdownRef.current = markdown;
+  }, [markdown]);
+
+  const handlePreviewScroll = () => {
+    if (viewMode !== 'split') return;
+    if (activePaneRef.current !== 'preview') return;
+    if (!textareaRef.current || !previewRef.current) return;
+    
+    const container = previewRef.current;
+    const elements = Array.from(container.querySelectorAll('[data-line]'));
+    
+    let targetLine = 1;
+    for (const el of elements) {
+      const rect = el.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      if (rect.top >= containerRect.top) {
+        targetLine = parseInt(el.getAttribute('data-line') || '1');
+        break;
+      }
+    }
+    
+    const textarea = textareaRef.current;
+    const lines = textarea.value.split('\n');
+    const totalLines = lines.length || 1;
+    
+    const percentage = Math.max(0, (targetLine - 1) / totalLines);
+    textarea.scrollTo({
+      top: percentage * textarea.scrollHeight,
+      behavior: 'auto'
+    });
+  };
 
   const handleCursorMove = () => {
     if (viewMode !== 'split') return;
@@ -714,6 +749,31 @@ export default function App() {
     li: Li,
     blockquote: Blockquote,
     table: Table,
+    input({ node, checked, type, ...props }: any) {
+      if (type === 'checkbox') {
+        const line = node?.position?.start?.line;
+        return (
+          <input 
+            type="checkbox" 
+            checked={checked} 
+            onChange={(e) => {
+              if (!line) return;
+              const newChecked = e.target.checked;
+              const lines = markdownRef.current.split('\n');
+              const targetLine = lines[line - 1];
+              if (targetLine) {
+                lines[line - 1] = targetLine.replace(/\[[ xX]\]/, newChecked ? '[x]' : '[ ]');
+                setMarkdown(lines.join('\n'));
+              }
+            }}
+            className="mr-2 cursor-pointer accent-claude-accent"
+            {...props}
+            disabled={false}
+          />
+        );
+      }
+      return <input type={type} checked={checked} {...props} />;
+    },
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
       const line = node?.position?.start?.line;
@@ -909,6 +969,8 @@ export default function App() {
                 onChange={(e) => setMarkdown(e.target.value)}
                 onKeyUp={handleCursorMove}
                 onClick={handleCursorMove}
+                onMouseEnter={() => activePaneRef.current = 'editor'}
+                onTouchStart={() => activePaneRef.current = 'editor'}
                 onKeyDown={(e) => {
                   if (e.key === 'Tab') {
                     e.preventDefault();
@@ -938,6 +1000,9 @@ export default function App() {
             <div 
               ref={previewRef}
               className="flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10"
+              onMouseEnter={() => activePaneRef.current = 'preview'}
+              onTouchStart={() => activePaneRef.current = 'preview'}
+              onScroll={handlePreviewScroll}
             >
               <div className="max-w-3xl mx-auto markdown-body text-sm [&_:is(h1,h2,h3,h4,h5,h6)]:font-serif [&_:is(h1,h2,h3,h4,h5,h6)]:font-bold [&_:is(h1,h2,h3,h4,h5,h6)]:text-claude-text dark:[&_:is(h1,h2,h3,h4,h5,h6)]:text-white [&_h1]:text-3xl [&_h1]:mt-6 [&_h1]:mb-4 [&_h2]:text-2xl [&_h2]:mt-5 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:mt-4 [&_h3]:mb-2 [&_h4]:text-lg [&_h4]:mt-3 [&_h4]:mb-2 [&_h5]:text-base [&_h5]:mt-2 [&_h5]:mb-1 [&_h6]:text-sm [&_h6]:mt-2 [&_h6]:mb-1 [&_p]:leading-relaxed [&_p]:my-3 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-2xl [&_img]:my-4 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-2 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-xs [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md">
                 <Markdown 
