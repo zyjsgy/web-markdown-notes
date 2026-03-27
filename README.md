@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/zyjsgy/image_store/blob/main/markdown-cloud.png" />
+<img width="1200" alt="GHBanner" src="https://github.com/zyjsgy/image_store/blob/main/markdown-cloud.png" />
 </div>
 
 # Run and deploy your AI Studio app
