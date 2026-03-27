@@ -76,7 +76,27 @@
   }
 
   /* Task list styling */
+  .markdown-body ul.contains-task-list {
+    list-style-type: none !important;
+    padding-left: 0 !important;
+  }
+  .markdown-body li.task-list-item {
+    list-style-type: none !important;
+  }
   .markdown-body input[type="checkbox"] {
     @apply w-4 h-4 rounded border-claude-border text-claude-accent focus:ring-claude-accent mr-2 align-middle;
+  }
+  
+  /* Checked task list item styling */
+  .markdown-body li.task-list-item[data-checked="true"] > .flex > .task-content,
+  .markdown-body li.task-list-item[data-checked="true"] > .flex > .task-content * {
+    color: rgba(29, 28, 26, 0.4) !important;
+    text-decoration: line-through !important;
+  }
+  
+  .dark .markdown-body li.task-list-item[data-checked="true"] > .flex > .task-content,
+  .dark .markdown-body li.task-list-item[data-checked="true"] > .flex > .task-content * {
+    color: rgba(230, 225, 219, 0.4) !important;
+    text-decoration: line-through !important;
   }
 }

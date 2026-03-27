@@ -830,12 +830,12 @@ export default function App() {
     h6: H6,
     ul: Ul,
     ol: Ol,
-    li({ node, children, checked, ...props }: any) {
-      const isChecked = checked === true || node?.checked === true;
-      const isTaskListItem = checked !== undefined || node?.checked !== undefined || props.className?.includes('task-list-item');
+    li({ node, children, ...props }: any) {
+      const isTaskListItem = props.className?.includes('task-list-item');
       
       if (isTaskListItem) {
         let checkbox: any = null;
+        let isChecked = false;
         const content: any[] = [];
         const nestedLists: any[] = [];
 
@@ -844,6 +844,7 @@ export default function App() {
           
           if (child?.type === 'input' || child?.props?.type === 'checkbox') {
             checkbox = child;
+            isChecked = child.props.checked;
           } else if (tagName === 'ul' || tagName === 'ol') {
             nestedLists.push(child);
           } else if (tagName === 'p') {
@@ -852,6 +853,7 @@ export default function App() {
             React.Children.forEach(child.props.children, (pChild: any) => {
               if (pChild?.type === 'input' || pChild?.props?.type === 'checkbox') {
                 pCheckbox = pChild;
+                isChecked = pChild.props.checked;
               } else {
                 pContent.push(pChild);
               }
@@ -870,20 +872,18 @@ export default function App() {
         return (
           <li 
             data-line={node?.position?.start?.line} 
+            data-checked={isChecked}
             className={cn("my-1 list-none flex flex-col gap-0", props.className)}
             {...props}
           >
             <div className="flex items-start gap-0">
               {checkbox}
-              <div className={cn(
-                "flex-1 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0",
-                isChecked ? "!text-claude-text/40 dark:!text-claude-dark-text/40 line-through decoration-current [&_*]:!text-claude-text/40 dark:[&_*]:!text-claude-dark-text/40" : ""
-              )}>
+              <div className="flex-1 task-content [&>p:first-child]:mt-0 [&>p:last-child]:mb-0">
                 {content}
               </div>
             </div>
             {nestedLists.length > 0 && (
-              <div className="w-full">
+              <div className="w-full pl-6">
                 {nestedLists}
               </div>
             )}
