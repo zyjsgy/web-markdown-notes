@@ -79,7 +79,4 @@
   .markdown-body input[type="checkbox"] {
     @apply w-4 h-4 rounded border-claude-border text-claude-accent focus:ring-claude-accent mr-2 align-middle;
   }
-  .markdown-body .task-list-item {
-    @apply list-none flex items-center my-1;
-  }
 }

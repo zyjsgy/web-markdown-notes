@@ -11,6 +11,7 @@ import {
   vscDarkPlus, 
   vs 
 } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { GoogleGenAI } from "@google/genai";
 import { 
   Bold, 
   Italic, 
@@ -72,41 +73,59 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 
-const INITIAL_MARKDOWN = `# Welcome to Markdown Cloud
+const INITIAL_MARKDOWN = `# 🚀 Welcome to Markdown Cloud
 
-Markdown Cloud is a professional-grade editor with real-time preview and AI-powered writing assistance.
+Markdown Cloud is a professional-grade editor designed for speed, clarity, and collaboration. Whether you're writing documentation, taking notes, or drafting your next big project, we've got you covered.
 
-## Key Features
-- **Real-time Preview**: See your changes as you type.
-- **AI Assistant**: Use Gemini to improve your writing.
-- **GFM Support**: Tables, task lists, and more.
-- **Responsive**: Works on all devices.
-- **Cloud Sync**: Sign in to save and sync your files.
-- **Drag & Drop**: Organize your files easily.
-- **Task Lists**: Keep track of your to-dos.
+## 🛠️ Key Features
 
-### To-Do List
-- [x] Create a professional markdown editor
-- [x] Add Claude-inspired styling
-- [ ] Write a best-selling novel
-- [ ] World domination (maybe later)
+### 1. Real-time Preview & Sync Scroll
+See your changes instantly as you type. Our **Sync Scroll** feature ensures that your editor and preview stay perfectly aligned, making it easy to navigate long documents.
 
-### Try a Table
-| Feature | Status |
-| :--- | :--- |
-| Markdown | ✅ |
-| AI | ✅ |
-| Fun | ✅ |
+### 2. Cloud Sync & File Explorer
+Sign in with Google to save your files to the cloud. Organize your work with **Folders** and **Files** in the sidebar. Your work is automatically saved as you write.
+
+### 3. Interactive Task Lists
+Keep track of your progress with interactive to-dos. You can toggle them directly in the preview pane!
+- [x] Create a new file
+- [x] Try the split view
+- [ ] Explore the AI Assistant
+- [ ] Share your work
+
+### 4. Collapsible Headings
+Stay organized by collapsing sections you're not working on. Just click the arrow next to any heading in the preview!
+
+### 5. AI-Powered Writing Assistant
+Stuck on a sentence? Use our **Gemini AI Assistant** in the toolbar to improve your writing, summarize content, or generate ideas.
+
+### 6. Professional Formatting
+- **GFM Support**: Tables, task lists, and strikethrough.
+- **Syntax Highlighting**: Beautiful code blocks for over 10 languages.
+- **Math Support**: (Coming soon!)
+
+---
+
+## 📝 Try it Out!
 
 ### Code Example
-\`\`\`python
-# 这是一个 Python 示例 (This is a Python example)
-def hello():
-    # 打印欢迎信息 (Print welcome message)
-    print("Hello, Markdown with Python!")
+\`\`\`typescript
+function greet(name: string) {
+  console.log(\`Hello, \${name}! Welcome to Markdown Cloud.\`);
+}
+greet('Writer');
 \`\`\`
 
-> "The pen is mightier than the sword, but the keyboard is faster."
+### Tables
+| Feature | Status |
+| :--- | :--- |
+| Real-time Preview | ✅ |
+| Cloud Sync | ✅ |
+| AI Assistant | ✅ |
+| Dark Mode | ✅ |
+
+> "The best way to predict the future is to write it."
+
+Happy writing! ✍️
 `;
 
 const LANGUAGES = [
@@ -151,12 +170,14 @@ const Table = withLine('table');
 
 export default function App() {
   const [markdown, setMarkdown] = useState(INITIAL_MARKDOWN);
+  const [welcomeContent, setWelcomeContent] = useState(INITIAL_MARKDOWN);
   const [viewMode, setViewMode] = useState<'split' | 'editor' | 'preview'>('split');
   const [copied, setCopied] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAILoading, setIsAILoading] = useState(false);
   const [nodes, setNodes] = useState<FileNode[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>('welcome');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -169,9 +190,21 @@ export default function App() {
   const collapsedHeadingsRef = useRef<Set<string>>(new Set());
   const activePaneRef = useRef<'editor' | 'preview' | null>(null);
   const markdownRef = useRef(markdown);
+  const lastActiveFileIdRef = useRef<string | null>(null);
+  const pendingScrollRef = useRef<{ editor?: number, preview?: number } | null>(null);
 
   useEffect(() => {
     markdownRef.current = markdown;
+    
+    if (pendingScrollRef.current) {
+      if (textareaRef.current && pendingScrollRef.current.editor !== undefined) {
+        textareaRef.current.scrollTop = pendingScrollRef.current.editor;
+      }
+      if (previewRef.current && pendingScrollRef.current.preview !== undefined) {
+        previewRef.current.scrollTop = pendingScrollRef.current.preview;
+      }
+      pendingScrollRef.current = null;
+    }
   }, [markdown]);
 
   const handlePreviewScroll = () => {
@@ -194,9 +227,9 @@ export default function App() {
     
     const textarea = textareaRef.current;
     const lines = textarea.value.split('\n');
-    const totalLines = lines.length || 1;
+    const totalLines = Math.max(1, lines.length);
     
-    const percentage = Math.max(0, (targetLine - 1) / totalLines);
+    const percentage = Math.max(0, Math.min(1, (targetLine - 1) / totalLines));
     textarea.scrollTo({
       top: percentage * textarea.scrollHeight,
       behavior: 'auto'
@@ -205,13 +238,15 @@ export default function App() {
 
   const handleCursorMove = () => {
     if (viewMode !== 'split') return;
-    if (!textareaRef.current || !previewRef.current) return;
+    const textarea = textareaRef.current;
+    const preview = previewRef.current;
+    if (!textarea || !preview) return;
     
-    const cursorIndex = textareaRef.current.selectionStart;
-    const textBeforeCursor = textareaRef.current.value.substring(0, cursorIndex);
+    const cursorIndex = textarea.selectionStart;
+    const textBeforeCursor = textarea.value.substring(0, cursorIndex);
     const currentLine = textBeforeCursor.split('\n').length;
     
-    const elements = Array.from(previewRef.current.querySelectorAll('[data-line]'));
+    const elements = Array.from(preview.querySelectorAll('[data-line]'));
     let targetElement = null;
     
     for (let i = elements.length - 1; i >= 0; i--) {
@@ -223,7 +258,7 @@ export default function App() {
     }
     
     if (targetElement) {
-      const container = previewRef.current;
+      const container = preview;
       const targetTop = (targetElement as HTMLElement).offsetTop;
       container.scrollTo({
         top: Math.max(0, targetTop - container.clientHeight / 3),
@@ -234,7 +269,7 @@ export default function App() {
 
   // Sync scroll on content change
   useEffect(() => {
-    if (viewMode === 'split') {
+    if (viewMode === 'split' && document.activeElement === textareaRef.current) {
       const timer = setTimeout(() => {
         handleCursorMove();
       }, 50);
@@ -381,30 +416,42 @@ export default function App() {
   // Active File Sync
   useEffect(() => {
     if (!activeFileId) return;
+    
     if (activeFileId === 'welcome') {
-      if (markdown !== INITIAL_MARKDOWN) {
-        setMarkdown(INITIAL_MARKDOWN);
-        lastSyncedContent.current = INITIAL_MARKDOWN;
+      // Only load when we switch TO welcome
+      if (lastActiveFileIdRef.current !== 'welcome') {
+        setMarkdown(welcomeContent);
+        lastSyncedContent.current = welcomeContent;
       }
+      lastActiveFileIdRef.current = 'welcome';
       return;
     }
+
+    lastActiveFileIdRef.current = activeFileId;
     const activeFile = nodes.find(n => n.id === activeFileId);
     if (activeFile && activeFile.content !== undefined) {
       // Only update local state if the server content is actually different from what we have
       // AND it's different from the last thing we synced (to avoid echoes of our own saves)
-      if (activeFile.content !== markdown && activeFile.content !== lastSyncedContent.current) {
+      if (activeFile.content !== markdownRef.current && activeFile.content !== lastSyncedContent.current) {
         setMarkdown(activeFile.content);
         lastSyncedContent.current = activeFile.content;
-      } else if (activeFile.content === markdown) {
+      } else if (activeFile.content === markdownRef.current) {
         // Keep track of the latest confirmed content from server
         lastSyncedContent.current = activeFile.content;
       }
     }
-  }, [activeFileId, nodes, markdown]);
+  }, [activeFileId, nodes, welcomeContent]);
 
   // Auto-save
   useEffect(() => {
-    if (!user || !activeFileId || activeFileId === 'welcome') return;
+    if (!activeFileId) return;
+
+    if (activeFileId === 'welcome') {
+      setWelcomeContent(markdown);
+      return;
+    }
+
+    if (!user) return;
 
     const timer = setTimeout(async () => {
       try {
@@ -453,6 +500,43 @@ export default function App() {
       textarea.focus();
       textarea.setSelectionRange(start + before.length, end + before.length);
     }, 0);
+  };
+
+  const handleAIAssist = async () => {
+    if (isAILoading) return;
+    
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    if (!selectedText) {
+      alert("Please select some text first for the AI to assist with.");
+      return;
+    }
+
+    setIsAILoading(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Improve the following markdown text, making it more professional and clear, while maintaining the original meaning. Return ONLY the improved text:\n\n${selectedText}`,
+      });
+
+      const improvedText = response.text;
+      if (improvedText) {
+        const newText = text.substring(0, start) + improvedText + text.substring(end);
+        setMarkdown(newText);
+      }
+    } catch (error) {
+      console.error("AI Assistant failed:", error);
+      alert("AI Assistant failed. Please try again later.");
+    } finally {
+      setIsAILoading(false);
+    }
   };
 
   const insertCodeBlock = (lang: string) => {
@@ -746,27 +830,108 @@ export default function App() {
     h6: H6,
     ul: Ul,
     ol: Ol,
-    li: Li,
+    li({ node, children, checked, ...props }: any) {
+      const isChecked = checked === true || node?.checked === true;
+      const isTaskListItem = checked !== undefined || node?.checked !== undefined || props.className?.includes('task-list-item');
+      
+      if (isTaskListItem) {
+        let checkbox: any = null;
+        const content: any[] = [];
+        const nestedLists: any[] = [];
+
+        React.Children.forEach(children, (child: any) => {
+          const tagName = child?.props?.node?.tagName;
+          
+          if (child?.type === 'input' || child?.props?.type === 'checkbox') {
+            checkbox = child;
+          } else if (tagName === 'ul' || tagName === 'ol') {
+            nestedLists.push(child);
+          } else if (tagName === 'p') {
+            let pCheckbox: any = null;
+            const pContent: any[] = [];
+            React.Children.forEach(child.props.children, (pChild: any) => {
+              if (pChild?.type === 'input' || pChild?.props?.type === 'checkbox') {
+                pCheckbox = pChild;
+              } else {
+                pContent.push(pChild);
+              }
+            });
+            if (pCheckbox) {
+              checkbox = pCheckbox;
+              content.push(React.cloneElement(child, { ...child.props, children: pContent }));
+            } else {
+              content.push(child);
+            }
+          } else {
+            content.push(child);
+          }
+        });
+
+        return (
+          <li 
+            data-line={node?.position?.start?.line} 
+            className={cn("my-1 list-none flex flex-col gap-0", props.className)}
+            {...props}
+          >
+            <div className="flex items-start gap-0">
+              {checkbox}
+              <div className={cn(
+                "flex-1 [&>p:first-child]:mt-0 [&>p:last-child]:mb-0",
+                isChecked ? "!text-claude-text/40 dark:!text-claude-dark-text/40 line-through decoration-current [&_*]:!text-claude-text/40 dark:[&_*]:!text-claude-dark-text/40" : ""
+              )}>
+                {content}
+              </div>
+            </div>
+            {nestedLists.length > 0 && (
+              <div className="w-full">
+                {nestedLists}
+              </div>
+            )}
+          </li>
+        );
+      }
+
+      return (
+        <li data-line={node?.position?.start?.line} className={cn("my-1", props.className)} {...props}>
+          {children}
+        </li>
+      );
+    },
     blockquote: Blockquote,
     table: Table,
     input({ node, checked, type, ...props }: any) {
       if (type === 'checkbox') {
-        const line = node?.position?.start?.line;
         return (
           <input 
             type="checkbox" 
             checked={checked} 
             onChange={(e) => {
+              const textarea = textareaRef.current;
+              const preview = previewRef.current;
+              const editorScrollTop = textarea?.scrollTop;
+              const previewScrollTop = preview?.scrollTop;
+              
+              const li = e.target.closest('li');
+              const lineAttr = li?.getAttribute('data-line');
+              const line = lineAttr ? parseInt(lineAttr) : node?.position?.start?.line;
+              
               if (!line) return;
               const newChecked = e.target.checked;
               const lines = markdownRef.current.split('\n');
               const targetLine = lines[line - 1];
               if (targetLine) {
                 lines[line - 1] = targetLine.replace(/\[[ xX]\]/, newChecked ? '[x]' : '[ ]');
-                setMarkdown(lines.join('\n'));
+                const newMarkdown = lines.join('\n');
+                
+                pendingScrollRef.current = {
+                  editor: editorScrollTop,
+                  preview: previewScrollTop
+                };
+                
+                setMarkdown(newMarkdown);
               }
             }}
-            className="mr-2 cursor-pointer accent-claude-accent"
+            className="mr-2 mt-1 cursor-pointer accent-claude-accent flex-shrink-0"
             {...props}
             disabled={false}
           />
@@ -917,23 +1082,36 @@ export default function App() {
         {/* Toolbar */}
         <div className="flex items-center justify-between px-8 py-2.5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-1.5">
-            <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" disabled={activeFileId === 'welcome'} />
-            <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" />
+            <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" />
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
-            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => insertText('\n- ')} title="Unordered List" disabled={activeFileId === 'welcome'} />
-            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => insertText('\n1. ')} title="Ordered List" disabled={activeFileId === 'welcome'} />
-            <ToolbarButton icon={<CheckSquare className="w-4 h-4" />} onClick={() => insertText('\n- [ ] ')} title="Task List" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<List className="w-4 h-4" />} onClick={() => insertText('\n- ')} title="Unordered List" />
+            <ToolbarButton icon={<ListOrdered className="w-4 h-4" />} onClick={() => insertText('\n1. ')} title="Ordered List" />
+            <ToolbarButton icon={<CheckSquare className="w-4 h-4" />} onClick={() => insertText('\n- [ ] ')} title="Task List" />
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
-            <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} onClick={() => insertText('[', '](url)')} title="Link" disabled={activeFileId === 'welcome'} />
-            <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" disabled={activeFileId === 'welcome'} />
+            <ToolbarButton icon={<LinkIcon className="w-4 h-4" />} onClick={() => insertText('[', '](url)')} title="Link" />
+            <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" />
             
+            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
+            <button 
+              onClick={handleAIAssist}
+              disabled={isAILoading}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 bg-claude-accent/10 hover:bg-claude-accent/20 text-claude-accent rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest",
+                isAILoading && "opacity-50 cursor-wait animate-pulse"
+              )}
+              title="AI Assist (Select text first)"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {isAILoading ? "Processing..." : "AI Assist"}
+            </button>
+
+            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
             <div className="relative">
               <button 
                 onClick={() => setShowLangMenu(!showLangMenu)} 
-                disabled={activeFileId === 'welcome'}
                 className={cn(
-                  "flex items-center gap-1.5 p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white",
-                  activeFileId === 'welcome' && "opacity-50 cursor-not-allowed"
+                  "flex items-center gap-1.5 p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white"
                 )}
               >
                 <Code className="w-4 h-4" />
@@ -985,10 +1163,8 @@ export default function App() {
                     }, 0);
                   }
                 }}
-                readOnly={activeFileId === 'welcome'}
                 className={cn(
-                  "flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent",
-                  activeFileId === 'welcome' && "opacity-80 cursor-default"
+                  "flex-1 p-10 resize-none focus:outline-none font-mono text-sm leading-relaxed text-claude-text/90 dark:text-claude-dark-text/90 bg-transparent"
                 )}
                 placeholder="Start writing markdown..."
                 spellCheck={false}
