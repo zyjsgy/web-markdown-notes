@@ -49,7 +49,9 @@ import {
   FileCode,
   Highlighter,
   Palette,
-  Eraser
+  Eraser,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { 
@@ -189,6 +191,7 @@ export default function App() {
   const [currentHighlightColor, setCurrentHighlightColor] = useState('hl-yellow');
   const [currentTextColor, setCurrentTextColor] = useState('tc-red');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isTopBarVisible, setIsTopBarVisible] = useState(true);
   const [nodes, setNodes] = useState<FileNode[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>('welcome');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -1190,9 +1193,22 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Floating Show Top Bar Button */}
+        {!isTopBarVisible && (
+          <button
+            onClick={() => setIsTopBarVisible(true)}
+            className="absolute top-4 right-4 z-50 p-2 bg-white dark:bg-claude-dark-sidebar border border-claude-border dark:border-claude-dark-border rounded-xl shadow-lg text-claude-text/60 hover:text-claude-text dark:text-claude-dark-text/60 dark:hover:text-white transition-all hover:scale-105"
+            title="Show Header & Toolbar"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Header */}
-        <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border z-10">
+        {isTopBarVisible && (
+          <>
+            <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border z-10">
           <div className="flex items-center gap-3 sm:gap-6">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl text-claude-text/60 dark:text-claude-dark-text/60 transition-colors">
               <PanelLeft className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -1417,8 +1433,12 @@ export default function App() {
             <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download Markdown" />
             <ToolbarButton icon={<FileCode className="w-4 h-4" />} onClick={handleDownloadHtml} title="Download HTML" />
             <ToolbarButton icon={<Printer className="w-4 h-4" />} onClick={handlePrint} title="Print Preview" />
+            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
+            <ToolbarButton icon={<Minimize2 className="w-4 h-4" />} onClick={() => setIsTopBarVisible(false)} title="Hide Header & Toolbar" />
           </div>
         </div>
+        </>
+        )}
 
         {/* Editor/Preview Area */}
         <main className="flex-1 flex overflow-hidden">

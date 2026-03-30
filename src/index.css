@@ -123,4 +123,31 @@
     color: rgba(230, 225, 219, 0.4) !important;
     text-decoration: line-through !important;
   }
+
+  /* CodeMirror Custom Styles */
+  .cm-editor {
+    height: 100%;
+    @apply text-sm;
+  }
+  .cm-scroller {
+    font-family: var(--font-mono) !important;
+    @apply p-10;
+  }
+  .cm-focused {
+    outline: none !important;
+  }
+  .dark .cm-editor {
+    background-color: transparent !important;
+  }
+  .cm-content {
+    @apply text-claude-text/90 dark:text-claude-dark-text/90;
+  }
+  .cm-gutters {
+    @apply bg-transparent border-none text-claude-text/20 dark:text-claude-dark-text/20;
+  }
+  
+  /* Hide Markup Widget */
+  .cm-markup-hidden {
+    display: none;
+  }
 }
