@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { 
   vscDarkPlus, 
@@ -45,7 +46,9 @@ import {
   Sparkles,
   CheckSquare,
   Printer,
-  FileCode
+  FileCode,
+  Highlighter,
+  Palette
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { 
@@ -176,8 +179,13 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showHighlightMenu, setShowHighlightMenu] = useState(false);
+  const [showTextColorMenu, setShowTextColorMenu] = useState(false);
+  const [isHighlighterActive, setIsHighlighterActive] = useState(false);
+  const [isTextColorActive, setIsTextColorActive] = useState(false);
+  const [currentHighlightColor, setCurrentHighlightColor] = useState('hl-yellow');
+  const [currentTextColor, setCurrentTextColor] = useState('tc-red');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isAILoading, setIsAILoading] = useState(false);
   const [nodes, setNodes] = useState<FileNode[]>([]);
   const [activeFileId, setActiveFileId] = useState<string | null>('welcome');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -543,6 +551,122 @@ export default function App() {
     insertText(`\n\`\`\`${lang}\n`, `\n\`\`\`\n`);
     setShowLangMenu(false);
   };
+
+  const insertHighlight = (colorClass: string) => {
+    setCurrentHighlightColor(colorClass);
+    setIsHighlighterActive(true);
+    setIsTextColorActive(false);
+    setShowHighlightMenu(false);
+    
+    // If there's a selection in the editor, apply it immediately
+    const textarea = textareaRef.current;
+    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      const selectedText = text.substring(start, end);
+      const before = `<mark class="${colorClass}">`;
+      const after = `</mark>`;
+      const newText = text.substring(0, start) + before + selectedText + after + text.substring(end);
+      setMarkdown(newText);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + before.length, end + before.length);
+      }, 0);
+    }
+  };
+
+  const insertTextColor = (colorClass: string) => {
+    setCurrentTextColor(colorClass);
+    setIsTextColorActive(true);
+    setIsHighlighterActive(false);
+    setShowTextColorMenu(false);
+    
+    // If there's a selection in the editor, apply it immediately
+    const textarea = textareaRef.current;
+    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      const selectedText = text.substring(start, end);
+      const before = `<span class="${colorClass}">`;
+      const after = `</span>`;
+      const newText = text.substring(0, start) + before + selectedText + after + text.substring(end);
+      setMarkdown(newText);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + before.length, end + before.length);
+      }, 0);
+    }
+  };
+
+  const applyFormattingToSource = (lineIndex: number, selectedText: string, type: 'highlight' | 'color') => {
+    const lines = markdownRef.current.split('\n');
+    const targetLine = lines[lineIndex];
+    if (!targetLine) return;
+
+    const openTag = type === 'highlight' 
+      ? `<mark class="${currentHighlightColor}">` 
+      : `<span class="${currentTextColor}">`;
+    const closeTag = type === 'highlight' ? `</mark>` : `</span>`;
+    
+    if (targetLine.includes(openTag + selectedText + closeTag)) return;
+
+    const newText = targetLine.replace(selectedText, `${openTag}${selectedText}${closeTag}`);
+    if (newText !== targetLine) {
+      lines[lineIndex] = newText;
+      setMarkdown(lines.join('\n'));
+    }
+  };
+
+  const handlePreviewMouseUp = () => {
+    if (!isHighlighterActive && !isTextColorActive) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+
+    // Find the line number from the closest data-line attribute
+    let node: Node | null = selection.anchorNode;
+    let element: HTMLElement | null = null;
+    
+    while (node) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).hasAttribute('data-line')) {
+        element = node as HTMLElement;
+        break;
+      }
+      node = node.parentNode;
+    }
+
+    if (element) {
+      const lineAttr = element.getAttribute('data-line');
+      if (lineAttr) {
+        const lineIndex = parseInt(lineAttr) - 1;
+        applyFormattingToSource(lineIndex, selectedText, isHighlighterActive ? 'highlight' : 'color');
+        // Clear selection to mimic Word's "paint" behavior
+        selection.removeAllRanges();
+      }
+    }
+  };
+
+  const HIGHLIGHT_COLORS = [
+    { label: 'Yellow', class: 'hl-yellow', color: 'bg-yellow-200' },
+    { label: 'Green', class: 'hl-green', color: 'bg-green-200' },
+    { label: 'Blue', class: 'hl-blue', color: 'bg-blue-200' },
+    { label: 'Pink', class: 'hl-pink', color: 'bg-pink-200' },
+    { label: 'Purple', class: 'hl-purple', color: 'bg-purple-200' },
+  ];
+
+  const TEXT_COLORS = [
+    { label: 'Red', class: 'tc-red', color: 'bg-red-500' },
+    { label: 'Blue', class: 'tc-blue', color: 'bg-blue-500' },
+    { label: 'Green', class: 'tc-green', color: 'bg-green-500' },
+    { label: 'Orange', class: 'tc-orange', color: 'bg-orange-500' },
+    { label: 'Purple', class: 'tc-purple', color: 'bg-purple-500' },
+    { label: 'Pink', class: 'tc-pink', color: 'bg-pink-500' },
+  ];
 
   const executePrint = () => {
     const printContent = document.querySelector('.markdown-body');
@@ -1080,7 +1204,7 @@ export default function App() {
         </header>
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-8 py-2.5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border overflow-x-auto no-scrollbar">
+        <div className="flex items-center justify-between px-8 py-2.5 bg-claude-bg dark:bg-claude-dark-bg border-b border-claude-border dark:border-claude-dark-border relative z-20">
           <div className="flex items-center gap-1.5">
             <ToolbarButton icon={<Bold className="w-4 h-4" />} onClick={() => insertText('**', '**')} title="Bold" />
             <ToolbarButton icon={<Italic className="w-4 h-4" />} onClick={() => insertText('_', '_')} title="Italic" />
@@ -1093,35 +1217,110 @@ export default function App() {
             <ToolbarButton icon={<ImageIcon className="w-4 h-4" />} onClick={() => insertText('![alt](', ')')} title="Image" />
             
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
-            <button 
-              onClick={handleAIAssist}
-              disabled={isAILoading}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 bg-claude-accent/10 hover:bg-claude-accent/20 text-claude-accent rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest",
-                isAILoading && "opacity-50 cursor-wait animate-pulse"
-              )}
-              title="AI Assist (Select text first)"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {isAILoading ? "Processing..." : "AI Assist"}
-            </button>
-
-            <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
-            <div className="relative">
+            <div className="relative flex items-center">
               <button 
-                onClick={() => setShowLangMenu(!showLangMenu)} 
+                onClick={() => {
+                  setIsHighlighterActive(!isHighlighterActive);
+                  setIsTextColorActive(false);
+                }}
                 className={cn(
-                  "flex items-center gap-1.5 p-2.5 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-xl transition-colors text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white"
+                  "flex items-center gap-1.5 p-2.5 rounded-xl transition-all",
+                  isHighlighterActive 
+                    ? "bg-claude-accent text-white shadow-inner" 
+                    : "hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white"
                 )}
+                title={isHighlighterActive ? "Turn off Highlighter" : "Turn on Highlighter"}
               >
-                <Code className="w-4 h-4" />
-                <ChevronDown className="w-3.5 h-3.5" />
+                <Highlighter className="w-4 h-4" />
+                <div className={cn(
+                  "w-2 h-2 rounded-full border border-white/20",
+                  HIGHLIGHT_COLORS.find(c => c.class === currentHighlightColor)?.color
+                )} />
               </button>
-              {showLangMenu && (
-                <div className="absolute top-full left-0 mt-2 w-40 bg-white dark:bg-claude-dark-sidebar border border-claude-border dark:border-claude-dark-border rounded-2xl shadow-xl z-50 py-2 overflow-hidden">
-                  {LANGUAGES.map(lang => (
-                    <button key={lang.value} onClick={() => insertCodeBlock(lang.value)} className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-claude-bg dark:hover:bg-claude-dark-bg text-claude-text/80 dark:text-claude-dark-text/80 transition-colors">{lang.label}</button>
+              <button 
+                onClick={() => {
+                  setShowHighlightMenu(!showHighlightMenu);
+                  setShowTextColorMenu(false);
+                }}
+                className="p-1 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-lg ml-0.5 text-claude-text/40"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              
+              {showHighlightMenu && (
+                <div className="absolute top-full left-0 mt-2 w-32 bg-white dark:bg-claude-dark-sidebar border border-claude-border dark:border-claude-dark-border rounded-2xl shadow-xl z-50 py-2 overflow-hidden">
+                  {HIGHLIGHT_COLORS.map(color => (
+                    <button 
+                      key={color.class} 
+                      onClick={() => insertHighlight(color.class)} 
+                      className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-claude-bg dark:hover:bg-claude-dark-bg text-claude-text/80 dark:text-claude-dark-text/80 transition-colors flex items-center gap-2"
+                    >
+                      <div className={cn("w-3 h-3 rounded-full border border-black/10", color.color)} />
+                      {color.label}
+                      {currentHighlightColor === color.class && <Check className="w-3 h-3 ml-auto text-claude-accent" />}
+                    </button>
                   ))}
+                  <div className="h-px bg-claude-border dark:bg-claude-dark-border my-1 mx-2" />
+                  <button 
+                    onClick={() => { setIsHighlighterActive(false); setShowHighlightMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 transition-colors"
+                  >
+                    Turn Off
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center ml-1">
+              <button 
+                onClick={() => {
+                  setIsTextColorActive(!isTextColorActive);
+                  setIsHighlighterActive(false);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 p-2.5 rounded-xl transition-all",
+                  isTextColorActive 
+                    ? "bg-claude-accent text-white shadow-inner" 
+                    : "hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white"
+                )}
+                title={isTextColorActive ? "Turn off Text Color" : "Turn on Text Color"}
+              >
+                <Palette className="w-4 h-4" />
+                <div className={cn(
+                  "w-2 h-2 rounded-full border border-white/20",
+                  TEXT_COLORS.find(c => c.class === currentTextColor)?.color
+                )} />
+              </button>
+              <button 
+                onClick={() => {
+                  setShowTextColorMenu(!showTextColorMenu);
+                  setShowHighlightMenu(false);
+                }}
+                className="p-1 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-lg ml-0.5 text-claude-text/40"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              
+              {showTextColorMenu && (
+                <div className="absolute top-full left-0 mt-2 w-32 bg-white dark:bg-claude-dark-sidebar border border-claude-border dark:border-claude-dark-border rounded-2xl shadow-xl z-50 py-2 overflow-hidden">
+                  {TEXT_COLORS.map(color => (
+                    <button 
+                      key={color.class} 
+                      onClick={() => insertTextColor(color.class)} 
+                      className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-claude-bg dark:hover:bg-claude-dark-bg text-claude-text/80 dark:text-claude-dark-text/80 transition-colors flex items-center gap-2"
+                    >
+                      <div className={cn("w-3 h-3 rounded-full border border-black/10", color.color)} />
+                      {color.label}
+                      {currentTextColor === color.class && <Check className="w-3 h-3 ml-auto text-claude-accent" />}
+                    </button>
+                  ))}
+                  <div className="h-px bg-claude-border dark:bg-claude-dark-border my-1 mx-2" />
+                  <button 
+                    onClick={() => { setIsTextColorActive(false); setShowTextColorMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 transition-colors"
+                  >
+                    Turn Off
+                  </button>
                 </div>
               )}
             </div>
@@ -1175,14 +1374,19 @@ export default function App() {
           {(viewMode === 'split' || viewMode === 'preview') && (
             <div 
               ref={previewRef}
-              className="flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10"
+              className={cn(
+                "flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10",
+                (isHighlighterActive || isTextColorActive) && "cursor-crosshair"
+              )}
               onMouseEnter={() => activePaneRef.current = 'preview'}
               onTouchStart={() => activePaneRef.current = 'preview'}
               onScroll={handlePreviewScroll}
+              onMouseUp={handlePreviewMouseUp}
             >
               <div className="max-w-3xl mx-auto markdown-body text-sm [&_:is(h1,h2,h3,h4,h5,h6)]:font-serif [&_:is(h1,h2,h3,h4,h5,h6)]:font-bold [&_:is(h1,h2,h3,h4,h5,h6)]:text-claude-text dark:[&_:is(h1,h2,h3,h4,h5,h6)]:text-white [&_h1]:text-3xl [&_h1]:mt-6 [&_h1]:mb-4 [&_h2]:text-2xl [&_h2]:mt-5 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:mt-4 [&_h3]:mb-2 [&_h4]:text-lg [&_h4]:mt-3 [&_h4]:mb-2 [&_h5]:text-base [&_h5]:mt-2 [&_h5]:mb-1 [&_h6]:text-sm [&_h6]:mt-2 [&_h6]:mb-1 [&_p]:leading-relaxed [&_p]:my-3 [&_p]:text-claude-text/90 dark:[&_p]:text-claude-dark-text/90 [&_a]:text-claude-accent [&_a]:underline [&_a]:underline-offset-4 [&_img]:rounded-2xl [&_img]:my-4 [&_img]:shadow-md [&_blockquote]:border-l-4 [&_blockquote]:border-claude-accent [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-claude-text/70 dark:[&_blockquote]:text-claude-dark-text/70 [&_blockquote]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_th]:border-b-2 [&_th]:border-claude-border dark:[&_th]:border-claude-dark-border [&_th]:p-2 [&_th]:text-left [&_th]:bg-claude-sidebar/50 dark:[&_th]:bg-claude-dark-sidebar/50 [&_td]:border-b [&_td]:border-claude-border dark:[&_td]:border-claude-dark-border [&_td]:p-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:my-1 [&_strong]:font-bold [&_em]:italic [&_code]:font-mono [&_code]:text-xs [&_code]:bg-claude-sidebar dark:[&_code]:bg-claude-dark-sidebar [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md">
                 <Markdown 
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
                   components={markdownComponents}
                 >
                   {markdown}

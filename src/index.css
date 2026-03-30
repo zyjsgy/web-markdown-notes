@@ -87,6 +87,24 @@
     @apply w-4 h-4 rounded border-claude-border text-claude-accent focus:ring-claude-accent mr-2 align-middle;
   }
   
+  /* Highlighting styles */
+  .markdown-body mark {
+    @apply px-1 rounded-sm;
+  }
+  .markdown-body mark.hl-yellow { @apply bg-yellow-200 dark:bg-yellow-900/40 text-inherit; }
+  .markdown-body mark.hl-green { @apply bg-green-200 dark:bg-green-900/40 text-inherit; }
+  .markdown-body mark.hl-blue { @apply bg-blue-200 dark:bg-blue-900/40 text-inherit; }
+  .markdown-body mark.hl-pink { @apply bg-pink-200 dark:bg-pink-900/40 text-inherit; }
+  .markdown-body mark.hl-purple { @apply bg-purple-200 dark:bg-purple-900/40 text-inherit; }
+
+  /* Text Color styles */
+  .markdown-body .tc-red { color: #ef4444 !important; }
+  .markdown-body .tc-blue { color: #3b82f6 !important; }
+  .markdown-body .tc-green { color: #22c55e !important; }
+  .markdown-body .tc-orange { color: #f97316 !important; }
+  .markdown-body .tc-purple { color: #a855f7 !important; }
+  .markdown-body .tc-pink { color: #ec4899 !important; }
+
   /* Checked task list item styling */
   .markdown-body li.task-list-item[data-checked="true"] > .flex > .task-content,
   .markdown-body li.task-list-item[data-checked="true"] > .flex > .task-content * {
