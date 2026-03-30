@@ -89,7 +89,10 @@
   
   /* Highlighting styles */
   .markdown-body mark {
-    @apply px-1 rounded-sm;
+    @apply p-0 m-0 rounded-sm inline;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    background-color: transparent; /* Fallback */
   }
   .markdown-body mark.hl-yellow { @apply bg-yellow-200 dark:bg-yellow-900/40 text-inherit; }
   .markdown-body mark.hl-green { @apply bg-green-200 dark:bg-green-900/40 text-inherit; }
@@ -98,6 +101,9 @@
   .markdown-body mark.hl-purple { @apply bg-purple-200 dark:bg-purple-900/40 text-inherit; }
 
   /* Text Color styles */
+  .markdown-body span[class^="tc-"] {
+    @apply p-0 m-0 inline;
+  }
   .markdown-body .tc-red { color: #ef4444 !important; }
   .markdown-body .tc-blue { color: #3b82f6 !important; }
   .markdown-body .tc-green { color: #22c55e !important; }

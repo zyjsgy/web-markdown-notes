@@ -182,6 +182,7 @@ export default function App() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showHighlightMenu, setShowHighlightMenu] = useState(false);
   const [showTextColorMenu, setShowTextColorMenu] = useState(false);
+  const [showEraserMenu, setShowEraserMenu] = useState(false);
   const [isHighlighterActive, setIsHighlighterActive] = useState(false);
   const [isTextColorActive, setIsTextColorActive] = useState(false);
   const [isEraserActive, setIsEraserActive] = useState(false);
@@ -602,6 +603,19 @@ export default function App() {
         textarea.setSelectionRange(start + before.length, end + before.length);
       }, 0);
     }
+  };
+
+  const clearAllFormatting = () => {
+    // Remove all <mark class="...">...</mark> and <span class="tc-...">...</span> tags
+    const markRegex = /<mark class="[^"]+">(.*?)<\/mark>/g;
+    const spanRegex = /<span class="tc-[^"]+">(.*?)<\/span>/g;
+    
+    let newText = markdown.replace(markRegex, '$1');
+    newText = newText.replace(spanRegex, '$1');
+    
+    setMarkdown(newText);
+    setShowEraserMenu(false);
+    setIsEraserActive(false);
   };
 
   const applyFormattingToSource = (lineIndex: number, selectedText: string, type: 'highlight' | 'color' | 'eraser') => {
@@ -1366,6 +1380,36 @@ export default function App() {
               >
                 <Eraser className="w-4 h-4" />
               </button>
+              <button 
+                onClick={() => {
+                  setShowEraserMenu(!showEraserMenu);
+                  setShowHighlightMenu(false);
+                  setShowTextColorMenu(false);
+                }}
+                className="p-1 hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar rounded-lg ml-0.5 text-claude-text/40"
+              >
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {showEraserMenu && (
+                <div className="absolute top-full left-0 mt-2 w-40 bg-white dark:bg-claude-dark-sidebar border border-claude-border dark:border-claude-dark-border rounded-2xl shadow-xl z-50 py-2 overflow-hidden">
+                  <button 
+                    onClick={() => { setIsEraserActive(!isEraserActive); setShowEraserMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-claude-bg dark:hover:bg-claude-dark-bg text-claude-text/80 dark:text-claude-dark-text/80 transition-colors flex items-center gap-2"
+                  >
+                    <Eraser className="w-3 h-3" />
+                    {isEraserActive ? "Turn Off Eraser" : "Turn On Eraser"}
+                  </button>
+                  <div className="h-px bg-claude-border dark:bg-claude-dark-border my-1 mx-2" />
+                  <button 
+                    onClick={clearAllFormatting}
+                    className="w-full text-left px-4 py-2 text-[11px] font-bold uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 transition-colors flex items-center gap-2"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear All Formatting
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
