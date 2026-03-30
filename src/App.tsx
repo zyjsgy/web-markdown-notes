@@ -48,7 +48,8 @@ import {
   Printer,
   FileCode,
   Highlighter,
-  Palette
+  Palette,
+  Eraser
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { 
@@ -183,6 +184,7 @@ export default function App() {
   const [showTextColorMenu, setShowTextColorMenu] = useState(false);
   const [isHighlighterActive, setIsHighlighterActive] = useState(false);
   const [isTextColorActive, setIsTextColorActive] = useState(false);
+  const [isEraserActive, setIsEraserActive] = useState(false);
   const [currentHighlightColor, setCurrentHighlightColor] = useState('hl-yellow');
   const [currentTextColor, setCurrentTextColor] = useState('tc-red');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -556,6 +558,7 @@ export default function App() {
     setCurrentHighlightColor(colorClass);
     setIsHighlighterActive(true);
     setIsTextColorActive(false);
+    setIsEraserActive(false);
     setShowHighlightMenu(false);
     
     // If there's a selection in the editor, apply it immediately
@@ -580,6 +583,7 @@ export default function App() {
     setCurrentTextColor(colorClass);
     setIsTextColorActive(true);
     setIsHighlighterActive(false);
+    setIsEraserActive(false);
     setShowTextColorMenu(false);
     
     // If there's a selection in the editor, apply it immediately
@@ -600,10 +604,26 @@ export default function App() {
     }
   };
 
-  const applyFormattingToSource = (lineIndex: number, selectedText: string, type: 'highlight' | 'color') => {
+  const applyFormattingToSource = (lineIndex: number, selectedText: string, type: 'highlight' | 'color' | 'eraser') => {
     const lines = markdownRef.current.split('\n');
     const targetLine = lines[lineIndex];
     if (!targetLine) return;
+
+    if (type === 'eraser') {
+      // Remove any <mark> or <span class="tc-..."> tags wrapping this text
+      // This is a simple regex approach
+      const markRegex = new RegExp(`<mark class="[^"]+">${selectedText}</mark>`, 'g');
+      const spanRegex = new RegExp(`<span class="tc-[^"]+">${selectedText}</span>`, 'g');
+      
+      let newText = targetLine.replace(markRegex, selectedText);
+      newText = newText.replace(spanRegex, selectedText);
+      
+      if (newText !== targetLine) {
+        lines[lineIndex] = newText;
+        setMarkdown(lines.join('\n'));
+      }
+      return;
+    }
 
     const openTag = type === 'highlight' 
       ? `<mark class="${currentHighlightColor}">` 
@@ -620,7 +640,7 @@ export default function App() {
   };
 
   const handlePreviewMouseUp = () => {
-    if (!isHighlighterActive && !isTextColorActive) return;
+    if (!isHighlighterActive && !isTextColorActive && !isEraserActive) return;
     
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
@@ -644,7 +664,11 @@ export default function App() {
       const lineAttr = element.getAttribute('data-line');
       if (lineAttr) {
         const lineIndex = parseInt(lineAttr) - 1;
-        applyFormattingToSource(lineIndex, selectedText, isHighlighterActive ? 'highlight' : 'color');
+        let formatType: 'highlight' | 'color' | 'eraser' = 'highlight';
+        if (isTextColorActive) formatType = 'color';
+        if (isEraserActive) formatType = 'eraser';
+        
+        applyFormattingToSource(lineIndex, selectedText, formatType);
         // Clear selection to mimic Word's "paint" behavior
         selection.removeAllRanges();
       }
@@ -1325,6 +1349,25 @@ export default function App() {
               )}
             </div>
 
+            <div className="relative flex items-center ml-1">
+              <button 
+                onClick={() => {
+                  setIsEraserActive(!isEraserActive);
+                  setIsHighlighterActive(false);
+                  setIsTextColorActive(false);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 p-2.5 rounded-xl transition-all",
+                  isEraserActive 
+                    ? "bg-red-500 text-white shadow-inner" 
+                    : "hover:bg-claude-sidebar dark:hover:bg-claude-dark-sidebar text-claude-text/60 dark:text-claude-dark-text/60 hover:text-claude-text dark:hover:text-white"
+                )}
+                title={isEraserActive ? "Turn off Eraser" : "Turn on Eraser (Clear formatting)"}
+              >
+                <Eraser className="w-4 h-4" />
+              </button>
+            </div>
+
             <div className="w-px h-5 bg-claude-border dark:bg-claude-dark-border mx-2" />
             <ToolbarButton icon={<Copy className="w-4 h-4" />} onClick={() => { navigator.clipboard.writeText(markdown); setCopied(true); setTimeout(() => setCopied(false), 2000); }} title="Copy" />
             <ToolbarButton icon={<Download className="w-4 h-4" />} onClick={() => { const blob = new Blob([markdown], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'document.md'; a.click(); URL.revokeObjectURL(url); }} title="Download Markdown" />
@@ -1376,7 +1419,7 @@ export default function App() {
               ref={previewRef}
               className={cn(
                 "flex-1 overflow-y-auto bg-claude-bg dark:bg-claude-dark-bg p-10",
-                (isHighlighterActive || isTextColorActive) && "cursor-crosshair"
+                (isHighlighterActive || isTextColorActive || isEraserActive) && "cursor-crosshair"
               )}
               onMouseEnter={() => activePaneRef.current = 'preview'}
               onTouchStart={() => activePaneRef.current = 'preview'}
